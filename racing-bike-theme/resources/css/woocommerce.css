@@ -556,6 +556,14 @@ form.checkout_coupon button.button {
   @apply text-red-400 ml-1;
 }
 
+.woocommerce-input-wrapper {
+  @apply block w-full;
+}
+
+address {
+  font-style: normal;
+}
+
 .form-row input.input-text,
 .form-row textarea,
 .form-row select {
