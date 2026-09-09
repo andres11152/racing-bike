@@ -4,22 +4,57 @@
   <x-hero-carousel :slides="$slides" />
 
   @if ($categories)
-    <section class="border-y border-line">
+    <section class="border-y border-line bg-surface-raised py-12 md:py-16" data-reveal>
       <div class="rb-container">
-        <div class="grid grid-cols-1 divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
+        <x-carousel-shelf
+          aria-label="{{ __('Categorías del catálogo', 'sage') }}"
+          tracking-id="home_categories"
+          controls-position="top"
+          title="{{ __('Explora por categoría', 'sage') }}"
+          subtitle="{{ __('Encuentra lo que buscas', 'sage') }}"
+        >
           @foreach ($categories as $category)
-            <a href="{{ $category['url'] }}" class="group flex items-center justify-between py-6 md:px-8 md:py-8 md:first:pl-0 md:last:pr-0">
-              <span class="text-sm font-bold uppercase tracking-widest text-ink transition-colors group-hover:text-ink-muted">
-                {{ $category['name'] }}
-              </span>
+            <a
+              href="{{ $category['url'] }}"
+              class="group relative flex w-[46%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-surface sm:w-[32%] lg:w-[19%]"
+              data-carousel-slide
+            >
+              <div class="relative aspect-[4/5] w-full overflow-hidden bg-surface-muted">
+                @if ($category['image'])
+                  <img
+                    src="{{ $category['image'] }}"
+                    alt="{{ $category['name'] }}"
+                    loading="lazy"
+                    decoding="async"
+                    class="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                  >
+                @else
+                  <div class="flex size-full items-center justify-center bg-gradient-to-br from-surface-muted to-surface">
+                    <x-icon name="wrench" class="size-10 text-ink-faint transition-colors group-hover:text-emerald-400" />
+                  </div>
+                @endif
 
-              <span class="flex items-center gap-2 text-xs text-ink-subtle">
-                {{ sprintf(_n('%s producto', '%s productos', $category['count'], 'sage'), number_format_i18n($category['count'])) }}
-                <x-icon name="chevron-right" class="size-4 transition-transform group-hover:translate-x-1" />
-              </span>
+                {{-- Degradado inferior para que el nombre siempre sea legible sobre cualquier foto --}}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent"></div>
+
+                <div class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3.5 md:p-4">
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold uppercase tracking-wide text-white text-balance md:text-base">
+                      {{ $category['name'] }}
+                    </p>
+                    <p class="mt-1 text-[11px] text-white/70">
+                      {{ sprintf(_n('%s producto', '%s productos', $category['count'], 'sage'), number_format_i18n($category['count'])) }}
+                    </p>
+                  </div>
+
+                  <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-all group-hover:bg-emerald-400 group-hover:text-black">
+                    <x-icon name="chevron-right" class="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </div>
             </a>
           @endforeach
-        </div>
+        </x-carousel-shelf>
       </div>
     </section>
   @endif
