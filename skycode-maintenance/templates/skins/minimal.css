@@ -1,0 +1,18 @@
+.skc-mm-wrap{max-width:640px;padding:clamp(24px,5vw,48px);text-align:center;}
+.skc-mm-logo{max-width:120px;margin-bottom:clamp(16px,5vw,32px);}
+.skc-mm-headline{font-size:clamp(1.5rem,5vw,2.25rem);font-weight:700;margin:0 0 clamp(8px,2vw,16px);letter-spacing:-0.02em;}
+.skc-mm-subtext{font-size:clamp(0.95rem,2vw,1.05rem);opacity:.85;margin:0 0 clamp(16px,4vw,32px);line-height:1.6;}
+.skc-mm-countdown{display:flex;gap:clamp(8px,2vw,16px);justify-content:center;margin-bottom:clamp(16px,4vw,32px);font-variant-numeric:tabular-nums;flex-wrap:nowrap;}
+.skc-mm-countdown span[data-unit]{font-size:clamp(1.2rem,4vw,1.8rem);font-weight:700;color:var(--skc-accent);}
+.skc-mm-cd-item{display:inline-flex;align-items:flex-end;gap:4px;}
+.skc-mm-cd-label{font-size:clamp(0.6rem,1.5vw,0.7rem);opacity:.7;margin-bottom:2px;}
+.skc-mm-subscribe{display:flex;gap:clamp(6px,1.5vw,8px);max-width:100%;margin:0 auto clamp(12px,3vw,24px);flex-wrap:wrap;justify-content:center;}
+.skc-mm-subscribe input[type=email]{flex:1;min-width:200px;max-width:100%;padding:clamp(10px,2vw,12px) clamp(12px,2vw,14px);border-radius:clamp(4px,1vw,6px);border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:inherit;font-size:1rem;}
+.skc-mm-subscribe button{padding:clamp(10px,2vw,12px) clamp(16px,3vw,20px);border:0;border-radius:clamp(4px,1vw,6px);background:var(--skc-accent);color:#fff;font-weight:600;cursor:pointer;font-size:0.95rem;white-space:nowrap;}
+.skc-mm-subscribe .skc-mm-hp{position:absolute;left:-9999px;width:1px;height:1px;}
+.skc-mm-subscribe-msg{width:100%;font-size:clamp(0.8rem,1.5vw,0.85rem);opacity:.85;margin:clamp(4px,1vw,8px) 0 0;}
+.skc-mm-socials{display:flex;gap:clamp(12px,2vw,16px);justify-content:center;margin-bottom:clamp(12px,3vw,24px);flex-wrap:wrap;}
+.skc-mm-socials a{color:inherit;opacity:.8;text-decoration:underline;font-size:clamp(0.8rem,1.5vw,0.9rem);}
+.skc-mm-custom{margin-bottom:clamp(12px,3vw,24px);}
+.skc-mm-footer{font-size:clamp(0.75rem,1.5vw,0.8rem);opacity:.6;}
+@media(max-width:480px){.skc-mm-wrap{padding:16px;}.skc-mm-countdown{flex-wrap:wrap;row-gap:8px;}.skc-mm-subscribe{gap:4px;}.skc-mm-subscribe input[type=email]{font-size:16px;}}

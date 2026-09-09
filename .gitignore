@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Backups / dumps — no versionar copias del sitio completo
+backup.wpress
+output_dir/
+extracted_backup/
+
+# Artefactos generados — se reconstruyen con composer/npm, no se versionan
+racing-bike-theme/node_modules/
+racing-bike-theme/vendor/
+racing-bike-theme/public/build/
+seo-by-rank-math/vendor/
+racing-bike-theme/package-lock.json
+
+# Paquetes de release (zips) — se regeneran, no se versionan
+production_packages/
+
+# OS
+.DS_Store
+**/.DS_Store

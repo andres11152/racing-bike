@@ -1,0 +1,10 @@
+.skc-md-skin-sidebar .skc-md-panel {
+    max-width: 360px;
+    margin: auto 0 auto auto;
+    height: 100%;
+    border-radius: 0;
+    transform: translateX(100%);
+}
+.skc-md-skin-sidebar.skc-md-open .skc-md-panel {
+    transform: translateX(0);
+}

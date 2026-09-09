@@ -1,0 +1,245 @@
+.skc-md-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skc-md-modal[hidden] {
+    display: none !important;
+}
+
+.skc-md-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.skc-md-panel {
+    position: relative;
+    z-index: 1;
+    background: var(--skc-md-bg, #fff);
+    color: var(--skc-md-text, #111827);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: auto;
+    padding: 2rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skc-md-panel {
+        transition: none;
+    }
+}
+
+/*
+ * Botón de cerrar: antes era una "x" transparente heredando el color de
+ * texto, así que sobre una imagen clara desaparecía. Ahora es una pastilla
+ * circular con el fondo del propio modal, de modo que siempre contrasta con
+ * la imagen que tenga detrás.
+ *
+ * Va en la esquina superior IZQUIERDA a propósito: la derecha está ocupada
+ * por el logo de marca sobre la imagen, y en pantallas pequeñas ambos se
+ * solapaban. Así cada uno tiene su esquina y nunca compiten.
+ */
+.skc-md-close {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border: 1px solid rgba(127, 127, 127, 0.35);
+    border-radius: 50%;
+    background: var(--skc-md-bg, #fff);
+    color: var(--skc-md-text, #111827);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.skc-md-close:hover {
+    transform: scale(1.08);
+}
+
+/* Anillo de foco propio: si no, el tema pinta un recuadro blanco encima. */
+.skc-md-close:focus {
+    outline: none;
+}
+
+.skc-md-close:focus-visible {
+    outline: 2px solid var(--skc-md-accent, #f97316);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skc-md-close {
+        transition: none;
+    }
+
+    .skc-md-close:hover {
+        transform: none;
+    }
+}
+
+.skc-md-media {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.skc-md-media > img:not(.skc-md-watermark) {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+}
+
+/*
+ * Logo de marca sobre la imagen: esquina superior derecha, por encima de la
+ * imagen en el eje Z. `pointer-events: none` para que nunca bloquee un clic,
+ * y una sombra suave para que se lea también sobre imágenes claras.
+ */
+.skc-md-media .skc-md-watermark {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 2;
+    height: var(--skc-md-watermark-size, 40px);
+    width: auto;
+    max-width: 45%;
+    margin: 0;
+    border-radius: 0;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
+}
+
+.skc-md-headline {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.skc-md-subtext {
+    margin: 0 0 1.25rem;
+    opacity: 0.85;
+}
+
+/*
+ * Los campos se estilan con doble clase (.skc-md-modal .skc-md-input) para
+ * ganar a las reglas de inputs del tema activo, y sus colores se derivan de
+ * `currentColor` —es decir, del color de texto de la campaña— para que el
+ * campo se vea igual de nítido sobre un fondo claro que sobre uno oscuro.
+ */
+.skc-md-modal .skc-md-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    opacity: 0.9;
+}
+
+.skc-md-modal .skc-md-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    margin-bottom: 0.85rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    line-height: 1.4;
+    font-family: inherit;
+    color: inherit;
+    /* Fallback gris neutro: legible tanto en claro como en oscuro. */
+    background: rgba(127, 127, 127, 0.14);
+    border: 1px solid rgba(127, 127, 127, 0.5);
+}
+
+@supports (border-color: color-mix(in srgb, currentColor 50%, transparent)) {
+    .skc-md-modal .skc-md-input {
+        background: color-mix(in srgb, currentColor 10%, transparent);
+        border-color: color-mix(in srgb, currentColor 45%, transparent);
+    }
+}
+
+.skc-md-modal .skc-md-input::placeholder {
+    color: inherit;
+    opacity: 0.55;
+}
+
+.skc-md-modal .skc-md-input:focus {
+    outline: 2px solid var(--skc-md-accent, #f97316);
+    outline-offset: 2px;
+    border-color: var(--skc-md-accent, #f97316);
+}
+
+/* El autorrelleno de Chrome fuerza fondo blanco: lo devolvemos al color del modal. */
+.skc-md-modal .skc-md-input:-webkit-autofill,
+.skc-md-modal .skc-md-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--skc-md-text, #111827);
+    box-shadow: 0 0 0 1000px var(--skc-md-bg, #fff) inset;
+}
+
+.skc-md-consent {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.skc-md-modal .skc-md-consent input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    accent-color: var(--skc-md-accent, #f97316);
+}
+
+.skc-md-submit {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--skc-md-accent, #f97316);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.skc-md-submit[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.skc-md-message {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    min-height: 1.1em;
+}
+
+.skc-md-message.is-error {
+    color: #b91c1c;
+}
+
+.skc-md-message.is-success {
+    color: #15803d;
+}
+
+.skc-md-hp {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden;
+}

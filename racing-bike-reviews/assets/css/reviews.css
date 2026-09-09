@@ -1,0 +1,785 @@
+/* Reseñas de clientes — consume los tokens semánticos del theme para no
+   desalinearse si la marca cambia de paleta. */
+
+.rb-reviews {
+    border-top: 1px solid var(--color-line, #e5e5e5);
+    padding: 3.5rem 0;
+    color: var(--color-ink, #111);
+}
+
+.rb-reviews__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.rb-reviews__heading {
+    font-family: var(--font-display, inherit);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+}
+
+.rb-reviews__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.rb-reviews__average {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.rb-reviews__count {
+    font-size: 0.75rem;
+    color: var(--color-ink-subtle, #777);
+    margin: 0.25rem 0 0;
+}
+
+.rb-reviews__empty {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted, #555);
+    max-width: 40ch;
+}
+
+.rb-reviews-stars {
+    display: inline-flex;
+    gap: 0.15rem;
+    color: var(--color-ink-faint, #ccc);
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.rb-reviews-star.is-filled {
+    color: var(--color-ink, #111);
+}
+
+.rb-reviews__distribution {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 1rem;
+    max-width: 260px;
+}
+
+.rb-reviews__bar-row {
+    display: grid;
+    grid-template-columns: 2rem 1fr 2rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--color-ink-subtle, #777);
+}
+
+.rb-reviews__bar-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-line, #e5e5e5);
+    overflow: hidden;
+}
+
+.rb-reviews__bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--color-ink, #111);
+}
+
+.rb-reviews__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.rb-reviews__filter,
+.rb-reviews__cta,
+.rb-reviews__load-more {
+    cursor: pointer;
+    font-family: var(--font-sans), inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--color-line-strong, #333);
+    background: transparent;
+    color: var(--color-ink, #ffffff);
+    padding: 0.8rem 1.6rem;
+    border-radius: 999px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.rb-reviews__filter,
+.rb-reviews__load-more {
+    background: #121316;
+    border-color: var(--color-line, #222);
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.rb-reviews__cta {
+    background: var(--color-action, #ffffff);
+    color: var(--color-on-action, #000000);
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(255, 255, 255, 0.1);
+}
+
+.rb-reviews__filter:hover,
+.rb-reviews__load-more:hover {
+    background: var(--color-surface-muted, #222);
+    border-color: var(--color-line-strong, #333);
+    transform: translateY(-1px);
+}
+
+.rb-reviews__cta:hover {
+    background: var(--color-action-hover, #f3f4f6);
+    color: var(--color-on-action, #000000);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+}
+
+.rb-reviews__filter[aria-pressed="true"] {
+    background: var(--color-ink, #ffffff);
+    color: var(--color-surface, #000000);
+    border-color: var(--color-ink, #ffffff);
+}
+
+/* Carrusel de reseñas — mismo contrato data-carousel-* que consume
+   initCarousel() en app.js del theme; este plugin no pasa por el build de
+   Tailwind, así que los controles se estilan aquí con CSS plano y los
+   tokens semánticos del theme, en vez de reutilizar sus clases utilitarias. */
+
+.rb-reviews__carousel {
+    position: relative;
+}
+
+.rb-reviews__carousel-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.rb-reviews__list {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+}
+
+.rb-reviews__list::-webkit-scrollbar {
+    display: none;
+}
+
+.rb-review-item {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-line, #e5e5e5);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+    .rb-review-item {
+        flex-basis: 47%;
+    }
+}
+
+@media (min-width: 960px) {
+    .rb-review-item {
+        flex-basis: 31%;
+    }
+}
+
+.rb-reviews__carousel-arrow {
+    position: absolute;
+    top: 40%;
+    transform: translateY(-50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line, #e5e5e5);
+    background: var(--color-surface, #fff);
+    color: var(--color-ink, #111);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.rb-reviews__carousel-arrow:hover {
+    background: var(--color-surface-muted, #f3f3f3);
+}
+
+.rb-reviews__carousel-arrow--prev {
+    left: -0.75rem;
+}
+
+.rb-reviews__carousel-arrow--next {
+    right: -0.75rem;
+}
+
+@media (min-width: 768px) {
+    .rb-reviews__carousel-arrow {
+        display: flex;
+    }
+}
+
+.rb-reviews__carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.rb-reviews__dots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+/* El punto visual mide 2px de alto, pero el botón clicable es de 1.5rem
+   (24px) — un área táctil de 2px es prácticamente imposible de tocar con el
+   dedo en móvil aunque los puntos se vean perfectos en escritorio. */
+.rb-reviews__dots [data-carousel-dot] {
+    position: relative;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.rb-reviews__dots [data-carousel-dot]::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-ink-faint, #ccc);
+    transform: translateY(-50%);
+}
+
+.rb-reviews__dots [data-carousel-dot][data-active="true"]::before {
+    background: var(--color-ink, #111);
+}
+
+.rb-reviews__carousel-pause {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-ink-subtle, #777);
+    padding: 0.2rem;
+    line-height: 1;
+}
+
+.rb-reviews__carousel-pause-icon {
+    display: block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-left: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+}
+
+.rb-reviews__carousel-pause-icon.border-r-0 {
+    border-left: 6px solid currentColor;
+    border-right: none;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    width: 0;
+    height: 0;
+}
+
+.rb-review-item__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.rb-review-item__author {
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rb-review-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-subtle, #777);
+    border: 1px solid var(--color-line-strong, #999);
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+}
+
+.rb-review-item__date {
+    font-size: 0.7rem;
+    color: var(--color-ink-faint, #aaa);
+    margin-left: auto;
+}
+
+.rb-review-item__title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+}
+
+.rb-review-item__fit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+
+.rb-review-item__fit li {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--color-surface-muted, #f3f3f3);
+    color: var(--color-ink-muted, #555);
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+}
+
+.rb-review-item__text {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--color-ink-muted, #444);
+    margin: 0 0 0.5rem;
+    /* Reseñas muy largas no deben estirar la diapositiva entera: se
+       recortan a 4 líneas. El texto completo sigue en el DOM — accesible a
+       lectores de pantalla y buscadores — y el botón "Leer más" de abajo es
+       lo que lo hace accesible también a quien lee con los ojos. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+
+.rb-review-item__text.is-expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.rb-review-item__more {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-ink, #111);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.rb-review-item__photos {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+.rb-review-item__photo {
+    width: 72px;
+    height: 72px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--color-line, #e5e5e5);
+    padding: 0;
+    cursor: pointer;
+    background: none;
+}
+
+.rb-review-item__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.rb-reviews__load-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+/* Modal de formulario */
+
+.rb-reviews__modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.rb-reviews__modal-overlay[hidden] {
+    display: none;
+}
+
+.rb-reviews__modal {
+    position: relative;
+    background: var(--color-surface, #fff);
+    color: var(--color-ink, #111);
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.rb-reviews__modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-ink-subtle, #777);
+}
+
+.rb-reviews__modal-title {
+    font-family: var(--font-display, inherit);
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    margin: 0 0 1.5rem;
+}
+
+.rb-form-field {
+    margin-bottom: 1.1rem;
+}
+
+.rb-form-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-subtle, #777);
+    margin-bottom: 0.4rem;
+}
+
+.rb-form-field input[type="text"],
+.rb-form-field input[type="number"],
+.rb-form-field input[type="email"],
+.rb-form-field select,
+.rb-form-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-line-strong, #ccc);
+    background: var(--color-surface, #fff);
+    color: var(--color-ink, #111);
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rb-form-field input[type="text"]:hover,
+.rb-form-field input[type="number"]:hover,
+.rb-form-field input[type="email"]:hover,
+.rb-form-field select:hover,
+.rb-form-field textarea:hover {
+    border-color: var(--color-ink-subtle, #999);
+}
+
+.rb-form-field input:focus-visible,
+.rb-form-field select:focus-visible,
+.rb-form-field textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-ink, #111);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink, #111) 15%, transparent);
+}
+
+.rb-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1rem;
+}
+
+.rb-reviews__honeypot {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.rb-reviews__rating-input {
+    display: inline-flex;
+    gap: 0.4rem;
+    font-size: 1.9rem;
+}
+
+.rb-reviews__rating-star {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-ink-faint, #ccc);
+    padding: 0.1rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.rb-reviews__rating-star:hover {
+    transform: scale(1.12);
+}
+
+.rb-reviews__rating-star:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink, #111) 20%, transparent);
+}
+
+.rb-reviews__rating-star.is-active {
+    color: var(--color-ink, #111);
+}
+
+/* Zona de arrastrar-y-soltar: reemplaza el <input type="file"> nativo, cuyo
+   texto ("Choose Files / No file chosen") lo pinta el navegador en su propio
+   idioma y no se puede traducir ni estilar. El input real sigue ahí, cubre
+   toda la zona con opacity:0 — sigue siendo el target real del clic, del
+   arrastre de archivos y del foco por teclado. */
+.rb-reviews__dropzone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    text-align: center;
+    padding: 1.5rem 1rem;
+    border: 1.5px dashed var(--color-line-strong, #999);
+    border-radius: 10px;
+    background: var(--color-surface-muted, #f6f6f6);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.rb-reviews__dropzone:hover {
+    border-color: var(--color-ink-subtle, #777);
+}
+
+.rb-reviews__dropzone.is-dragover {
+    border-color: var(--color-ink, #111);
+    background: color-mix(in srgb, var(--color-ink, #111) 6%, var(--color-surface-muted, #f6f6f6));
+}
+
+.rb-reviews__dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.rb-reviews__dropzone input[type="file"]:focus-visible ~ .rb-reviews__dropzone-icon {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink, #111) 25%, transparent);
+    border-radius: 999px;
+}
+
+.rb-reviews__dropzone-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--color-ink-subtle, #777);
+}
+
+.rb-reviews__dropzone-text {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted, #444);
+}
+
+.rb-reviews__dropzone-text strong {
+    color: var(--color-ink, #111);
+    font-weight: 700;
+}
+
+.rb-reviews__dropzone-hint {
+    margin: 0;
+    font-size: 0.7rem;
+    color: var(--color-ink-faint, #999);
+}
+
+.rb-reviews__photo-preview {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+}
+
+.rb-reviews__photo-preview img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--color-line, #e5e5e5);
+}
+
+.rb-reviews__form-note {
+    font-size: 0.7rem;
+    color: var(--color-ink-faint, #999);
+    margin: 0 0 1rem;
+}
+
+.rb-reviews__submit {
+    width: 100%;
+    background: var(--color-action, #111);
+    color: var(--color-on-action, #fff);
+    border: none;
+    padding: 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.rb-reviews__submit:hover {
+    background: var(--color-action-hover, #333);
+}
+
+.rb-reviews__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.rb-reviews__form-status {
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    min-height: 1em;
+}
+
+.rb-reviews__form-status[data-state="error"] {
+    color: #d33;
+}
+
+.rb-reviews__form-status[data-state="success"] {
+    color: #1a7f37;
+}
+
+/* Lightbox de fotos */
+
+.rb-reviews__lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.rb-reviews__lightbox[hidden] {
+    display: none;
+}
+
+.rb-reviews__lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.rb-reviews__lightbox-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.rb-reviews__lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.rb-reviews__lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.rb-reviews__lightbox-nav--prev {
+    left: 1rem;
+}
+
+.rb-reviews__lightbox-nav--next {
+    right: 1rem;
+}
+
+@media (max-width: 640px) {
+    .rb-reviews__header {
+        flex-direction: column;
+    }
+
+    .rb-reviews__actions {
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .rb-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

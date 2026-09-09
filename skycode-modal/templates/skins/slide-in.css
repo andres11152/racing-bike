@@ -1,0 +1,10 @@
+.skc-md-skin-slide-in .skc-md-panel {
+    max-width: 380px;
+    margin: auto auto auto 0;
+    height: 100%;
+    border-radius: 0;
+    transform: translateX(-100%);
+}
+.skc-md-skin-slide-in.skc-md-open .skc-md-panel {
+    transform: translateX(0);
+}

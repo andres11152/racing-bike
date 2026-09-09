@@ -1,0 +1,691 @@
+/*
+ | Estilos para el markup que genera WooCommerce y que no pasa por nuestros
+ | componentes Blade: el selector de orden, la paginación, los avisos y los
+ | formularios de carrito/checkout.
+ |
+ | Se cargan porque `woocommerce_enqueue_styles` está vaciado en app/setup.php:
+ | sin esto, esas piezas quedarían sin estilo alguno.
+ */
+
+.rb-woo-ordering {
+  @apply w-full;
+}
+
+.rb-woo-ordering select {
+  @apply cursor-pointer border border-line-strong bg-surface px-3 py-2 text-xs uppercase tracking-widest text-ink w-full max-w-full;
+}
+
+.rb-woo-ordering select:focus-visible {
+  @apply border-ink outline-none;
+}
+
+/* El <select> nativo hereda el fondo del sistema en las opciones. */
+.rb-woo-ordering option {
+  @apply bg-surface-raised text-ink;
+}
+
+/* --- Paginación --- */
+
+.rb-woo-pagination ul.page-numbers {
+  @apply flex flex-wrap items-center justify-center gap-2;
+}
+
+.rb-woo-pagination .page-numbers {
+  @apply inline-flex h-10 min-w-10 items-center justify-center border border-line px-3 text-xs font-medium text-ink-muted transition-colors;
+}
+
+.rb-woo-pagination .page-numbers:hover {
+  @apply border-line-strong text-ink;
+}
+
+.rb-woo-pagination .page-numbers.current {
+  @apply border-ink bg-action text-on-action;
+}
+
+.rb-woo-pagination .page-numbers.dots {
+  @apply border-transparent;
+}
+
+/* --- Avisos (añadido al carrito, errores de validación) --- */
+
+.woocommerce-notices-wrapper:empty {
+  @apply hidden;
+}
+
+.woocommerce-message,
+.woocommerce-info,
+.woocommerce-error {
+  @apply mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-l-2 bg-surface-raised px-5 py-4 text-sm text-ink;
+}
+
+.woocommerce-message {
+  @apply border-l-ink;
+}
+
+.woocommerce-info {
+  @apply border-l-line-strong text-ink-muted;
+}
+
+.woocommerce-error {
+  @apply list-none border-l-red-500;
+}
+
+.woocommerce-message .button,
+.woocommerce-info .button,
+.woocommerce-error .button {
+  @apply ml-auto;
+}
+
+/* --- Botones que WooCommerce imprime desde sus plantillas --- */
+
+.woocommerce .button,
+.woocommerce button.button,
+.woocommerce input.button,
+.woocommerce a.button {
+  @apply inline-flex items-center justify-center gap-2 border-0 bg-action px-6 py-3 text-xs font-medium uppercase tracking-widest text-on-action transition-colors;
+}
+
+.woocommerce .button:hover,
+.woocommerce button.button:hover,
+.woocommerce input.button:hover,
+.woocommerce a.button:hover {
+  @apply bg-action-hover;
+}
+
+.woocommerce .button:disabled,
+.woocommerce .button.disabled {
+  @apply pointer-events-none opacity-40;
+}
+
+/* --- Checkout: contener Mercado Pago sin romper el sidebar sticky ---
+   `overflow-hidden` en un ancestro anula `position: sticky` en cualquier
+   descendiente (y recorta los dropdowns de cuotas/documento de MP), así que
+   el ancho se controla con min-width: 0 en las columnas del grid en vez de
+   recortar el contenedor completo. */
+
+.woocommerce-checkout {
+  @apply relative;
+}
+
+.woocommerce-checkout iframe[src*="mercadopago"],
+.woocommerce-checkout [data-checkout],
+#checkout-mercado-pago,
+.mercado-pago-container {
+  max-width: 100%;
+  width: 100%;
+}
+
+/* --- Paso "Método de Pago": tarjeta contenedora de las pasarelas --- */
+
+.rb-payment-step {
+  min-width: 0;
+}
+
+/* Los selectores repiten `#payment` (y no sólo `.rb-payment-step`) para
+   ganarle en especificidad a las reglas con id `#payment` de más abajo,
+   compartidas con el carrito y "Añadir método de pago". */
+.rb-payment-step #payment.woocommerce-checkout-payment {
+  @apply bg-transparent rounded-none border-none p-0 mt-0;
+}
+
+.rb-payment-step #payment ul.payment_methods {
+  @apply list-none space-y-3 border-none p-0;
+}
+
+.rb-payment-step #payment ul.payment_methods li.wc_payment_method {
+  @apply relative overflow-hidden rounded-xl border border-line-strong bg-[#121316] transition-colors;
+}
+
+.rb-payment-step #payment ul.payment_methods li.wc_payment_method:has(input.input-radio:checked) {
+  @apply border-emerald-500/60 bg-[#141b17];
+}
+
+.rb-payment-step #payment input.input-radio {
+  @apply size-4 shrink-0 accent-emerald-500 absolute left-4 top-1/2 -translate-y-1/2;
+}
+
+.rb-payment-step #payment label[for^="payment_method_"] {
+  @apply flex w-full cursor-pointer items-center gap-3 px-4 py-4 pl-12 text-sm font-semibold text-ink;
+}
+
+.rb-payment-step #payment img[alt] {
+  @apply ml-auto h-5 w-auto max-w-32 object-contain;
+}
+
+.rb-payment-step #payment div.payment_box {
+  @apply border-t border-line-strong bg-[#0d0e10] p-4 text-xs leading-relaxed text-ink-muted md:p-5 mt-0 rounded-none;
+}
+
+.rb-payment-step #payment div.payment_box::before {
+  display: none;
+}
+
+/* El propio bundle de Mercado Pago ya fuerza casi todo con !important (campo
+   de tarjeta a 48px, fila número/CVV en dos columnas que se apilan solas en
+   mobile, selects, wallet button): pelear esas reglas es ruido. Lo único que
+   MP no define es el marco exterior del bloque blanco de Secure Fields
+   (campos en iframe: recolorearlos por CSS no entra ahí y arriesga dejarlos
+   ilegibles), así que sólo se le agrega esquinas y sombra para integrarlo
+   como una tarjeta intencional dentro del paso de pago oscuro. */
+.rb-payment-step .mp-checkout-custom-container {
+  @apply rounded-xl shadow-lg;
+}
+
+/* Resumen del pedido colapsable en móvil (`<details>`): el navegador dibuja
+   su propio triángulo marker además del chevron del icono; se oculta el
+   nativo en los dos motores que lo renderizan distinto (Firefox vs. resto). */
+details.group > summary {
+  list-style: none;
+}
+
+details.group > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.group > summary::marker {
+  content: '';
+}
+
+/* Campos de formulario (carrito, checkout, cuenta) */
+
+.woocommerce form .form-row {
+  @apply mb-4 flex flex-col gap-1.5;
+}
+
+.woocommerce form label {
+  @apply text-xs uppercase tracking-widest text-ink-muted;
+}
+
+.woocommerce input[type="text"],
+.woocommerce input[type="email"],
+.woocommerce input[type="tel"],
+.woocommerce input[type="password"],
+.woocommerce input[type="number"],
+.woocommerce textarea,
+.woocommerce select {
+  @apply w-full border border-line-strong bg-transparent px-4 py-3 text-sm text-ink;
+}
+
+.woocommerce input::placeholder,
+.woocommerce textarea::placeholder {
+  @apply text-ink-faint;
+}
+
+.woocommerce input:focus-visible,
+.woocommerce textarea:focus-visible,
+.woocommerce select:focus-visible {
+  @apply border-ink outline-none;
+}
+
+/* --- Tablas (carrito, totales, pedidos) --- */
+
+.woocommerce table {
+  @apply w-full border-collapse text-sm;
+}
+
+.woocommerce table th {
+  @apply border-b border-line px-3 py-3 text-left text-xs uppercase tracking-widest text-ink-subtle;
+}
+
+.woocommerce table td {
+  @apply border-b border-line px-3 py-4 text-ink-muted;
+}
+
+.woocommerce table td a {
+  @apply text-ink;
+}
+
+/* --- Precios --- */
+
+.woocommerce .price,
+.woocommerce .woocommerce-Price-amount {
+  @apply text-ink;
+}
+
+.woocommerce del,
+.woocommerce del .woocommerce-Price-amount {
+  @apply text-ink-subtle;
+}
+
+.woocommerce ins {
+  @apply no-underline;
+}
+
+/* --- Ficha de producto: precio --- */
+
+.rb-woo-price .price {
+  @apply flex flex-wrap items-baseline gap-3 font-semibold text-ink;
+}
+
+.rb-woo-price del {
+  @apply text-base font-normal text-ink-subtle line-through;
+}
+
+.rb-woo-price ins {
+  @apply no-underline;
+}
+
+/* --- Ficha de producto: formulario de compra --- */
+
+.rb-woo-add-to-cart .cart {
+  @apply flex flex-col gap-4;
+}
+
+/* Fila de cantidad + botón, uno junto al otro. */
+.rb-woo-add-to-cart .cart:not(.variations_form),
+.rb-woo-add-to-cart .variations_button {
+  @apply flex flex-row flex-wrap items-center gap-3 mt-3;
+}
+
+.rb-woo-add-to-cart .quantity {
+  @apply inline-flex items-center rounded-full border border-line bg-surface-raised/80 px-2 py-0.5 shadow-inner;
+}
+
+.rb-woo-add-to-cart .quantity input[type="number"] {
+  @apply w-12 border-0 bg-transparent py-2 text-center text-xs font-bold text-white focus:outline-none;
+  appearance: textfield;
+}
+
+.rb-woo-add-to-cart .quantity input::-webkit-inner-spin-button,
+.rb-woo-add-to-cart .quantity input::-webkit-outer-spin-button {
+  appearance: none;
+}
+
+.rb-woo-add-to-cart .single_add_to_cart_button,
+.rb-woo-add-to-cart button[type="submit"] {
+  @apply flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-black uppercase tracking-wider px-6 py-3.5 text-xs hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-lg cursor-pointer;
+}
+
+.rb-woo-add-to-cart .single_add_to_cart_button:disabled,
+.rb-woo-add-to-cart .single_add_to_cart_button.disabled,
+.rb-woo-add-to-cart button[type="submit"]:disabled {
+  @apply opacity-40 cursor-not-allowed pointer-events-none bg-neutral-800 text-neutral-400 border border-white/10 shadow-none;
+}
+
+/* --- Selector de variaciones (talla del marco) --- */
+
+.rb-woo-add-to-cart .variations {
+  @apply w-full border-collapse mb-1;
+}
+
+.rb-woo-add-to-cart .variations tr {
+  @apply flex flex-col gap-2 mb-3;
+}
+
+.rb-woo-add-to-cart .variations th,
+.rb-woo-add-to-cart .variations td {
+  @apply border-0 px-0 py-0;
+}
+
+.rb-woo-add-to-cart .variations th label {
+  @apply text-xs font-bold uppercase tracking-wider text-ink-subtle flex items-center justify-between mb-1;
+}
+
+.rb-woo-add-to-cart .variations select {
+  @apply w-full rounded-xl border border-line-strong bg-surface-raised px-4 py-3 text-xs uppercase tracking-wider text-ink;
+}
+
+.rb-woo-add-to-cart .variations select option {
+  @apply bg-surface-raised text-ink;
+}
+
+.rb-swatches {
+  @apply flex flex-wrap items-center gap-2.5 pt-1;
+}
+
+.rb-swatch {
+  @apply min-w-12 px-4 py-2.5 rounded-xl border border-line bg-[#131417] text-xs font-bold uppercase tracking-wider text-ink-muted transition-all duration-200 hover:border-white/80 hover:text-white active:scale-95 cursor-pointer shadow-sm relative select-none;
+}
+
+.rb-swatch:hover {
+  @apply border-white text-white;
+}
+
+.rb-swatch[data-selected="true"],
+.rb-swatch[data-selected="true"]:hover,
+.rb-swatch[data-selected="true"]:focus {
+  @apply border-white! bg-white! text-black! font-black! shadow-[0_0_20px_rgba(255,255,255,0.35)]! scale-100!;
+}
+
+.rb-swatch[data-available="false"] {
+  @apply cursor-not-allowed border-line/30 bg-surface/30 text-ink-faint line-through opacity-30 hover:scale-100 hover:border-line/30 hover:text-ink-faint;
+}
+
+.rb-woo-add-to-cart .reset_variations {
+  @apply text-[11px] font-semibold uppercase tracking-wider text-ink-subtle hover:text-emerald-400 transition-colors ml-2 cursor-pointer;
+}
+
+/* Ocultar el precio duplicado de variación para que sólo se actualice el precio principal superior */
+.rb-woo-add-to-cart .woocommerce-variation-price {
+  @apply hidden;
+}
+
+.rb-woo-add-to-cart .woocommerce-variation-description {
+  @apply text-xs text-ink-muted my-2;
+}
+
+.rb-woo-add-to-cart .woocommerce-variation-availability {
+  @apply text-xs font-semibold text-emerald-400 my-1.5 flex items-center gap-1.5;
+}
+
+.rb-woo-add-to-cart .stock.out-of-stock {
+  @apply text-xs uppercase tracking-widest text-red-400;
+}
+
+/* --- Contenido enriquecido de la descripción --- */
+
+.rb-prose p + p {
+  @apply mt-4;
+}
+
+.rb-prose ul {
+  @apply mt-4 list-disc space-y-1 pl-5;
+}
+
+/* --- Estilos para la tabla del Carrito y Checkout de WooCommerce --- */
+
+.woocommerce-cart .woocommerce,
+.woocommerce-checkout .woocommerce {
+  @apply w-full;
+}
+
+.woocommerce-cart-form__contents,
+table.shop_table {
+  @apply w-full border-collapse text-left text-sm text-ink;
+}
+
+table.shop_table th {
+  @apply border-b border-line pb-4 text-xs uppercase tracking-widest text-ink-subtle font-semibold;
+}
+
+table.shop_table td {
+  @apply border-b border-line py-4 text-sm text-ink;
+}
+
+table.shop_table a {
+  @apply text-ink font-semibold hover:underline;
+}
+
+.cart-collaterals,
+.cart_totals {
+  @apply m-0! p-0! border-none! text-ink!;
+}
+
+.cart_totals > *:first-child,
+.cart_totals h2 {
+  @apply mt-0! pt-0!;
+}
+
+.cart_totals h2 {
+  @apply text-base! font-bold! uppercase! tracking-wider! text-ink! mb-4! pb-2! border-b! border-line!;
+}
+
+.cart_totals table.shop_table {
+  @apply border-none m-0 p-0 w-full;
+}
+
+.cart_totals table.shop_table tr th,
+.cart_totals table.shop_table tr td {
+  @apply py-3 border-b border-line/60 text-xs font-bold uppercase tracking-wider text-ink;
+}
+
+.cart_totals table.shop_table tr.order-total th,
+.cart_totals table.shop_table tr.order-total td {
+  @apply py-4 border-b border-line text-sm font-black text-ink;
+}
+
+.cart_totals .wc-proceed-to-checkout {
+  @apply mt-6 p-0;
+}
+
+/* Métodos de envío (radios dentro de la fila "Envío" de la tabla de totales,
+   en carrito y checkout — cart-shipping.php de WooCommerce). Sin estas
+   reglas se renderizan con el radio y la tipografía nativos del navegador:
+   el único elemento sin diseñar en toda la columna de resumen. Mismo
+   patrón de tarjeta que ya usan los métodos de pago (.rb-payment-step),
+   adaptado a un layout más compacto porque aquí vive dentro de una celda
+   de tabla angosta, no de la columna completa del paso de pago. */
+.woocommerce-shipping-methods {
+  @apply list-none space-y-2 border-none p-0 m-0 normal-case tracking-normal;
+}
+
+.woocommerce-shipping-methods li {
+  @apply relative overflow-hidden rounded-lg border border-line-strong bg-[#121316] transition-colors;
+}
+
+.woocommerce-shipping-methods li:has(input.shipping_method:checked) {
+  @apply border-emerald-500/60 bg-[#141b17];
+}
+
+.woocommerce-shipping-methods input.shipping_method {
+  @apply size-3.5 shrink-0 accent-emerald-500 absolute left-3 top-1/2 -translate-y-1/2;
+}
+
+.woocommerce-shipping-methods label {
+  @apply block w-full cursor-pointer px-3 py-2.5 pl-9 text-xs font-medium normal-case tracking-normal text-ink;
+}
+
+/* Radio único (input hidden): WooCommerce lo oculta cuando sólo hay un
+   método disponible, así que la fila no necesita el espacio del radio. */
+.woocommerce-shipping-methods li:has(input.shipping_method[type="hidden"]) label {
+  @apply pl-3;
+}
+
+.woocommerce-shipping-destination {
+  @apply mt-2 text-xs text-ink-subtle normal-case tracking-normal;
+}
+
+.wc-proceed-to-checkout a.checkout-button,
+a.button.wc-backward,
+.return-to-shop a.button {
+  @apply w-full! inline-flex! items-center! justify-center! gap-2! font-bold! uppercase! tracking-widest! bg-action! text-on-action! px-6! py-3.5! text-xs! hover:bg-action-hover! transition-all! duration-200! shadow-lg! rounded-full! cursor-pointer! mt-0!;
+}
+
+.woocommerce-NoticeGroup,
+.woocommerce-NoticeGroup-checkout {
+  @apply w-full block mb-6 col-span-full;
+}
+
+.woocommerce-info,
+.woocommerce-message,
+.woocommerce-error {
+  @apply w-full border border-line bg-surface-raised p-4 text-sm text-ink mb-6 rounded-xl shadow-lg list-none;
+}
+
+.woocommerce-error {
+  @apply border-red-500/50 bg-red-950/40 text-red-200 border-l-4 border-l-red-500;
+}
+
+.woocommerce-error li {
+  @apply text-xs leading-relaxed py-1 list-none flex items-center gap-2;
+}
+
+.woocommerce-error li::before {
+  content: '⚠️';
+  @apply shrink-0 text-sm;
+}
+
+.woocommerce-info {
+  @apply border-line-strong bg-surface text-ink-muted border-l-4 border-l-emerald-400;
+}
+
+.woocommerce-message {
+  @apply border-emerald-500/40 bg-emerald-950/30 text-emerald-200 border-l-4 border-l-emerald-400;
+}
+
+/* --- Formulario de cupón desplegable --- */
+form.checkout_coupon {
+  @apply bg-surface-raised p-6 rounded-xl border border-line mb-6 flex flex-wrap gap-4 items-center;
+}
+
+form.checkout_coupon input.input-text {
+  @apply flex-1 min-w-[200px] rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-white;
+}
+
+form.checkout_coupon button.button {
+  @apply rounded-lg bg-white text-black font-bold uppercase tracking-wider px-6 py-3 text-xs hover:bg-neutral-200 transition-all;
+}
+
+/* --- Formularios de Checkout y Facturación en Colombia --- */
+
+.woocommerce-billing-fields h3,
+.woocommerce-shipping-fields h3,
+#order_review_heading {
+  @apply text-sm font-bold uppercase tracking-widest text-ink mb-6 pb-2 border-b border-line;
+}
+
+.woocommerce-billing-fields__field-wrapper,
+.woocommerce-shipping-fields__field-wrapper {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.form-row {
+  @apply flex flex-col gap-1.5 mb-4;
+}
+
+.form-row-wide,
+.form-row-full {
+  @apply md:col-span-2;
+}
+
+.form-row label {
+  @apply text-[11px] font-bold uppercase tracking-wider text-ink-subtle;
+}
+
+.form-row .required {
+  @apply text-red-400 ml-1;
+}
+
+.form-row input.input-text,
+.form-row textarea,
+.form-row select {
+  @apply w-full! rounded-xl! border! border-line-strong! bg-[#121316]! px-4! py-3.5! text-sm! text-white! placeholder-ink-subtle! transition-colors! focus:border-white! focus:outline-none! focus:ring-1! focus:ring-white!;
+}
+
+/* Fix para autofill del navegador en modo oscuro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #121316 inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+.select2-container--default .select2-selection--single {
+  @apply w-full! h-auto! rounded-xl! border! border-line-strong! bg-[#121316]! text-sm! text-white! transition-colors! focus:border-white! focus:outline-none!;
+  padding: 0 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  @apply text-white! text-sm! px-4! py-3.5! block!;
+  line-height: normal !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  @apply top-1/2! -translate-y-1/2! right-4! h-auto!;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: #ffffff transparent transparent transparent !important;
+  border-width: 5px 4px 0 4px !important;
+}
+
+.select2-dropdown {
+  @apply bg-[#141518]! border! border-line-strong! text-white! rounded-xl! shadow-2xl! z-[9999]!;
+}
+
+.select2-results__option {
+  @apply text-sm! px-4! py-2.5! bg-transparent! text-ink-muted!;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option[aria-selected="true"] {
+  @apply bg-white! text-black! font-bold!;
+}
+
+.select2-search--dropdown {
+  @apply bg-[#121316]! p-2.5! border-b! border-line!;
+}
+
+.select2-search--dropdown .select2-search__field {
+  @apply bg-[#1a1b1e]! border! border-line-strong! text-white! text-sm! px-3! py-2! rounded-lg! outline-none! focus:border-white!;
+}
+
+.form-row select option {
+  @apply bg-[#141518] text-white py-2;
+}
+
+#add_payment_method #payment,
+.woocommerce-cart #payment {
+  @apply bg-transparent rounded-none border-none p-0 mt-4;
+}
+
+#add_payment_method #payment ul.payment_methods,
+.woocommerce-cart #payment ul.payment_methods {
+  @apply border-b border-line pb-6 space-y-4 list-none p-0;
+}
+
+#add_payment_method #payment div.payment_box,
+.woocommerce-cart #payment div.payment_box {
+  @apply bg-[#121316] p-4 rounded-xl text-xs text-ink-muted mt-2 border border-line leading-relaxed;
+}
+
+/* El checkout usa `.rb-payment-step` (más abajo) para su propio tratamiento:
+   estas reglas con id `#payment` sólo cubren carrito y "Añadir método de pago"
+   en Mi Cuenta, que no pasan por form-checkout.blade.php. */
+.woocommerce-checkout #payment {
+  @apply bg-transparent rounded-none border-none p-0;
+}
+
+#place_order {
+  @apply w-full! inline-flex! items-center! justify-center! gap-2! font-black! uppercase! tracking-widest! bg-white! text-black! px-8! py-4! text-sm! hover:bg-neutral-200! transition-all! duration-200! shadow-2xl! rounded-full! cursor-pointer! mt-6! active:scale-95!;
+}
+
+/* --- Ajustes de ancho y desbordamiento en Checkout ---
+   `overflow-x: hidden` aquí (como el `overflow-hidden` de más arriba) anula
+   el `position: sticky` del sidebar de resumen: el desbordamiento se corta
+   con min-width: 0 en las columnas del grid, no recortando el contenedor. */
+.woocommerce-checkout {
+  max-width: 100% !important;
+}
+
+.woocommerce-checkout .grid > * {
+  min-width: 0;
+}
+
+.woocommerce-checkout-review-order-table,
+.shop_table.woocommerce-checkout-review-order-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.woocommerce-checkout-review-order-table td,
+.woocommerce-checkout-review-order-table th {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+#customer_details,
+.woocommerce-checkout-review-order {
+  max-width: 100% !important;
+}
+
+/* Comprobante de pedido: mucha gente imprime o guarda en PDF una compra de
+   este monto. Sólo el contenido del pedido, sin header/footer/CTAs/beams. */
+@media print {
+  body > *:not(#app) {
+    display: none !important;
+  }
+
+  #app > *:not(main) {
+    display: none !important;
+  }
+
+  .rb-order-received {
+    max-width: 100% !important;
+    padding: 0 !important;
+    color: #000 !important;
+  }
+}

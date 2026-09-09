@@ -1,0 +1,20 @@
+body{font-family:"Courier New",monospace;}
+.skc-mm-wrap{max-width:600px;padding:clamp(24px,5vw,48px);text-align:center;border:2px solid var(--skc-accent);}
+.skc-mm-logo{max-width:clamp(100px,20vw,150px);margin-bottom:clamp(16px,4vw,28px);}
+.skc-mm-headline{font-size:clamp(1.4rem,5vw,2rem);font-weight:700;margin:0 0 clamp(8px,2vw,16px);text-transform:uppercase;letter-spacing:.05em;}
+.skc-mm-headline::before{content:"// ";color:var(--skc-accent);}
+.skc-mm-subtext{font-size:clamp(0.9rem,2vw,1rem);opacity:.85;margin:0 0 clamp(16px,4vw,32px);}
+.skc-mm-countdown{display:flex;gap:clamp(8px,2vw,14px);justify-content:center;margin-bottom:clamp(16px,4vw,32px);font-variant-numeric:tabular-nums;flex-wrap:nowrap;}
+.skc-mm-countdown span[data-unit]{font-size:clamp(1rem,4vw,1.7rem);font-weight:700;border:1px solid var(--skc-accent);padding:clamp(4px,1vw,6px) clamp(8px,1.5vw,10px);color:var(--skc-accent);}
+.skc-mm-cd-item{display:inline-flex;align-items:flex-end;gap:4px;}
+.skc-mm-cd-label{font-size:clamp(0.55rem,1.5vw,0.65rem);opacity:.7;margin-bottom:clamp(2px,1vw,6px);text-transform:uppercase;}
+.skc-mm-subscribe{display:flex;gap:0;max-width:100%;margin:0 auto clamp(12px,3vw,24px);flex-wrap:wrap;justify-content:center;}
+.skc-mm-subscribe input[type=email]{flex:1;min-width:200px;max-width:100%;padding:clamp(10px,2vw,12px) clamp(12px,2vw,14px);border:1px solid var(--skc-accent);background:transparent;color:inherit;font-size:1rem;font-family:"Courier New",monospace;}
+.skc-mm-subscribe button{padding:clamp(10px,2vw,12px) clamp(16px,3vw,20px);border:1px solid var(--skc-accent);background:var(--skc-accent);color:#000;font-weight:700;cursor:pointer;text-transform:uppercase;font-size:0.85rem;white-space:nowrap;}
+.skc-mm-subscribe .skc-mm-hp{position:absolute;left:-9999px;width:1px;height:1px;}
+.skc-mm-subscribe-msg{width:100%;font-size:clamp(0.75rem,1.5vw,0.8rem);opacity:.85;margin:clamp(4px,1vw,8px) 0 0;}
+.skc-mm-socials{display:flex;gap:clamp(12px,2vw,16px);justify-content:center;margin-bottom:clamp(12px,3vw,24px);flex-wrap:wrap;}
+.skc-mm-socials a{color:var(--skc-accent);text-decoration:none;font-size:clamp(0.75rem,1.5vw,0.85rem);text-transform:uppercase;}
+.skc-mm-custom{margin-bottom:clamp(12px,3vw,24px);}
+.skc-mm-footer{font-size:clamp(0.7rem,1.5vw,0.75rem);opacity:.6;text-transform:uppercase;}
+@media(max-width:480px){.skc-mm-wrap{padding:16px;border-width:1px;}.skc-mm-countdown{flex-wrap:wrap;row-gap:8px;}.skc-mm-subscribe{gap:0;}.skc-mm-subscribe input[type=email]{font-size:16px;}}

@@ -1,0 +1,160 @@
+.skc-md-wrap .skc-md-title {
+    margin-bottom: 0.5rem;
+}
+
+.skc-md-nav {
+    margin-bottom: 1.5rem;
+}
+
+.skc-md-inline-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1rem 0;
+}
+
+.skc-md-table {
+    margin-top: 1rem;
+}
+
+.skc-md-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.skc-md-badge-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.skc-md-badge-paused {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.skc-md-danger {
+    color: #b91c1c;
+}
+
+/* Editor */
+.skc-md-editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    gap: 2rem;
+    align-items: start;
+}
+
+.skc-md-field-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.skc-md-campaign-title {
+    font-size: 1.2rem;
+    padding: 0.4rem 0.6rem;
+}
+
+.skc-md-status-toggle label {
+    margin-right: 0.75rem;
+}
+
+.skc-md-subtabs {
+    margin-bottom: 1rem;
+}
+
+.skc-md-tab-panel[hidden] {
+    display: none;
+}
+
+.skc-md-preview-pane {
+    position: sticky;
+    top: 40px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+/*
+ * La vista previa reutiliza el HTML y el CSS reales del modal
+ * (.skc-md-modal / .skc-md-overlay / .skc-md-panel), así que lo que se ve
+ * aquí es exactamente lo que se ve en el sitio. Solo necesitamos: (1) un
+ * "viewport" contenido en vez de ocupar toda la pantalla, y (2) forzar los
+ * colores de campaña por encima de cualquier estilo propio de wp-admin
+ * (algo como `.wrap h2` tiene más especificidad que una sola clase nuestra;
+ * admin.js pone los colores como estilo inline, que gana siempre).
+ */
+.skc-md-preview-viewport {
+    position: relative;
+    height: 460px;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid #dcdcde;
+    background-color: #f0f0f1;
+    background-image:
+        linear-gradient(45deg, #e5e5e6 25%, transparent 25%),
+        linear-gradient(-45deg, #e5e5e6 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e5e5e6 75%),
+        linear-gradient(-45deg, transparent 75%, #e5e5e6 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.skc-md-preview-viewport .skc-md-modal {
+    position: absolute;
+}
+
+.skc-md-preview-viewport .skc-md-panel {
+    max-height: 100%;
+}
+
+.skc-md-preview-viewport .skc-md-close {
+    cursor: default;
+}
+
+/* Variantes A/B */
+.skc-md-variant-row {
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) auto;
+    gap: 0.5rem;
+}
+
+.skc-md-variant-row input {
+    width: 100%;
+}
+
+.skc-md-variant-row .skc-md-remove-variant {
+    align-self: start;
+}
+
+/* Stats */
+.skc-md-stat-cards {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0 2rem;
+    flex-wrap: wrap;
+}
+
+.skc-md-stat-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 140px;
+}
+
+.skc-md-stat-num {
+    font-size: 1.8rem;
+    font-weight: 700;
+}

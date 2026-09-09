@@ -1,0 +1,20 @@
+.skc-mm-wrap-admin{max-width:1200px;margin:20px 0;}
+.skc-mm-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.skc-mm-head h1{display:flex;align-items:center;gap:12px;}
+.skc-mm-status-badge{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;vertical-align:middle;}
+.skc-mm-status-badge.on{background:#fde8e8;color:#c0392b;}
+.skc-mm-status-badge.off{background:#e8f8ee;color:#1e8449;}
+.skc-mm-tabs{display:flex;gap:4px;border-bottom:1px solid #dcdcde;}
+.skc-mm-tab{padding:10px 16px;text-decoration:none;color:#50575e;border-bottom:2px solid transparent;}
+.skc-mm-tab.active{color:#1d2327;border-bottom-color:#2271b1;font-weight:600;}
+.skc-mm-notice{background:#fff;border-left:4px solid #2271b1;padding:12px 16px;margin-bottom:16px;box-shadow:0 1px 1px rgba(0,0,0,.04);}
+.skc-mm-notice.warn{border-left-color:#dba617;}
+.skc-mm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;}
+.skc-mm-card{background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:20px;}
+.skc-mm-card-wide{grid-column:1/-1;}
+.skc-mm-card h2{margin-top:0;font-size:15px;}
+.skc-mm-field{display:block;margin-bottom:14px;}
+.skc-mm-field span{display:block;font-weight:600;margin-bottom:4px;}
+.skc-mm-field-inline{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.skc-mm-field-inline input[type=checkbox]{margin:0;}
+.skc-mm-logo-picker img{border:1px solid #dcdcde;padding:4px;background:#fff;}

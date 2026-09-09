@@ -1,0 +1,479 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syncopate:wght@400;700&display=swap');
+@import "tailwindcss" theme(static);
+@source "../../app/**/*.php";
+
+@source "../**/*.blade.php";
+@source "../**/*.js";
+
+@import "./woocommerce.css";
+@import "./bike-builder.css";
+
+@theme {
+  /* ---------------------------------------------------------------------
+   | Paleta de marca — valores fuente. No usar directamente en componentes:
+   | usar los tokens semánticos de abajo, que son los que se reasignan si
+   | la marca cambia de superficie (p. ej. una variante clara).
+   * ------------------------------------------------------------------ */
+  --color-brand-black: #000000;
+  --color-brand-charcoal: #111111;
+  --color-brand-graphite: #222222;
+  --color-brand-mist: #f3f4f6;
+  --color-brand-white: #ffffff;
+
+  /* ---------------------------------------------------------------------
+   | Tokens semánticos — la capa que consumen los componentes.
+   * ------------------------------------------------------------------ */
+
+  /* Superficies */
+  --color-surface: var(--color-brand-black);
+  --color-surface-raised: var(--color-brand-charcoal);
+  --color-surface-muted: var(--color-brand-graphite);
+
+  /* Texto */
+  --color-ink: var(--color-brand-white);
+  --color-ink-muted: color-mix(in srgb, var(--color-brand-white) 60%, transparent);
+  /* 40% daba 3.66:1 sobre #000-#222 — bajo el 4.5:1 que exige AA para texto
+     normal, y 177 usos en el tema, 131 de ellos en 10-12px (por debajo del
+     umbral de "texto grande" que se conforma con 3:1). 55% da ~6.2:1: sigue
+     leyéndose como secundario, ya cumple AA en cualquier tamaño. */
+  --color-ink-subtle: color-mix(in srgb, var(--color-brand-white) 55%, transparent);
+  --color-ink-faint: color-mix(in srgb, var(--color-brand-white) 20%, transparent);
+
+  /* Bordes */
+  --color-line: color-mix(in srgb, var(--color-brand-white) 12%, transparent);
+  --color-line-strong: color-mix(in srgb, var(--color-brand-white) 30%, transparent);
+
+  /* Acción primaria: bloque claro sobre fondo oscuro */
+  --color-action: var(--color-brand-white);
+  --color-action-hover: var(--color-brand-mist);
+  --color-on-action: var(--color-brand-black);
+
+  /* Estado */
+  --color-sale: var(--color-brand-white);
+
+  /* Tipografía: Plus Jakarta Sans para cuerpo y Syncopate para títulos deportivos */
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-display: "Syncopate", sans-serif;
+}
+
+@layer base {
+  html, body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-wider uppercase;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-ink text-surface;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ink;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      @apply scroll-auto;
+    }
+
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Contenedor de página — un solo lugar define el ancho y el gutter.
+     WooCommerce inyecta su propio markup sin contenedor, así que esto se
+     aplica también a sus wrappers desde woocommerce.css. */
+  .rb-container {
+    @apply w-full px-4 sm:px-6 md:px-8 lg:px-12;
+  }
+}
+
+@layer utilities {
+  /* Paneles off-canvas: menú móvil, carrito, filtros, quick view.
+     La exclusión de accesibilidad/tabulación cuando está cerrado la resuelve
+     `drawer.inert` en JS (ver initDrawer) — no CSS: `visibility` con
+     transition-behavior:allow-discrete tarda ~2 frames en reflejarse en
+     getComputedStyle en Chromium, lo que rompe el .focus() síncrono al
+     abrir. `inert` sí es síncrono y cubre tanto el árbol de accesibilidad
+     como el orden de Tab, así que aquí sólo queda la opacidad visual. */
+  .drawer {
+    @apply pointer-events-none fixed inset-0 z-50 opacity-0 transition-opacity duration-300;
+  }
+
+  .drawer[data-open="true"] {
+    @apply pointer-events-auto opacity-100;
+  }
+
+  .drawer[data-open="true"] .drawer-panel {
+    @apply translate-x-0;
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Respiración lenta del fondo de haces de luz — ver `data-beams-pulse`. */
+  @keyframes rb-beams-pulse {
+    0%, 100% { opacity: 0.05; }
+    50% { opacity: 0.15; }
+  }
+
+  .rb-beams-overlay {
+    animation: rb-beams-pulse 10s ease-in-out infinite;
+    backdrop-filter: blur(50px);
+  }
+
+  /* -------------------------------------------------------------------------
+   | Preloader — mismo lenguaje de acento esmeralda que el resto del sitio.
+   * ---------------------------------------------------------------------- */
+
+  @keyframes preloader-glow-pulse {
+    0%, 100% { transform: scale(0.85); opacity: 0.35; }
+    50% { transform: scale(1.08); opacity: 0.65; }
+  }
+
+  .preloader-glow {
+    animation: preloader-glow-pulse 3.2s ease-in-out infinite;
+  }
+
+  @keyframes preloader-logo-breathe {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); }
+    50% { transform: scale(1.035); filter: drop-shadow(0 0 26px rgba(16, 185, 129, 0.45)); }
+  }
+
+  .preloader-logo {
+    animation: preloader-logo-breathe 3.2s ease-in-out infinite;
+  }
+
+  .preloader-bar {
+    background: linear-gradient(90deg, transparent, #10b981 25%, #10b981 50%, #10b981 75%, transparent);
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.75);
+  }
+
+  @keyframes preloader-caption-fade {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
+
+  .preloader-caption {
+    animation: preloader-caption-fade 2.4s ease-in-out infinite;
+  }
+
+  .animate-marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 30s linear infinite;
+  }
+
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
+  /* -------------------------------------------------------------------------
+   | Micro-animaciones & Efectos Premium
+   * ---------------------------------------------------------------------- */
+
+  .card-glass-glow {
+    @apply transition-all duration-500 ease-out hover:border-white/20 hover:bg-surface-raised/80 hover:shadow-[0_0_30px_rgba(255,255,255,0.07)] hover:-translate-y-1.5;
+  }
+
+  .shine-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shine-effect::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      60deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 70%
+    );
+    transform: rotate(30deg) translateX(-100%);
+    transition: transform 0.8s ease-in-out;
+  }
+
+  .shine-effect:hover::after {
+    transform: rotate(30deg) translateX(100%);
+  }
+
+  .ken-burns {
+    animation: kenburns 14s ease-in-out infinite alternate;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  @keyframes kenburns {
+    0% {
+      transform: scale(1) translate(0, 0);
+    }
+    50% {
+      transform: scale(1.15) translate(-1.5%, -1%);
+    }
+    100% {
+      transform: scale(1.22) translate(1.5%, 1%);
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+   | Scrollbar Minimalista & Animaciones al Scroll
+   * ---------------------------------------------------------------------- */
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333333;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+  }
+
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+    filter: blur(6px);
+    transition: opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1), transform 1.3s cubic-bezier(0.16, 1, 0.3, 1), filter 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity, filter;
+  }
+
+  [data-reveal="true"] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .shimmer-bg {
+    @apply relative overflow-hidden bg-white/[0.03] border border-white/[0.05];
+  }
+
+  .shimmer-bg::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.04] to-transparent;
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* -------------------------------------------------------------------------
+   | Vista de Lista Horizontal (WooCommerce Catálogo)
+   * ---------------------------------------------------------------------- */
+  .view-mode-list article {
+    @apply flex flex-col md:flex-row gap-6 md:p-4 items-stretch justify-start w-full transition-all duration-300;
+  }
+
+  .view-mode-list article > a {
+    @apply flex flex-col md:flex-row md:items-center md:gap-6 w-full;
+  }
+
+  .view-mode-list article .relative.aspect-4\/5 {
+    @apply aspect-square w-full md:w-44 md:h-44 md:aspect-square shrink-0 rounded-2xl overflow-hidden;
+  }
+
+  .view-mode-list article .mt-4 {
+    @apply mt-0 flex-1 flex flex-col justify-center space-y-3;
+  }
+
+  .view-mode-list article .line-clamp-1 {
+    @apply text-base md:text-lg font-bold line-clamp-none;
+  }
+
+  .view-mode-list article ul.flex.flex-wrap {
+    @apply pt-2;
+  }
+
+  /* -------------------------------------------------------------------------
+   | Vista de Cuadrícula Compacta (Alta Densidad)
+   * ---------------------------------------------------------------------- */
+  .view-mode-compact article {
+    @apply p-2;
+  }
+
+  .view-mode-compact article .relative.aspect-4\/5 {
+    @apply rounded-md;
+  }
+
+  .view-mode-compact article .mt-4 {
+    @apply mt-2.5 space-y-1;
+  }
+
+  .view-mode-compact article h3.line-clamp-1 {
+    @apply text-[11px] leading-tight font-medium;
+  }
+
+  .view-mode-compact article .price {
+    @apply text-xs font-semibold;
+  }
+
+  /* Ocultar elementos de baja prioridad en vista compacta */
+  .view-mode-compact article .flex.items-center.gap-1.5, /* Calificaciones/Estrellas */
+  .view-mode-compact article ul.flex.flex-wrap { /* Lista de tallas */
+    @apply hidden!;
+  }
+
+  /* Rejilla adaptativa según el modo de vista */
+  .view-mode-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  .view-mode-compact {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  @media (max-width: 639px) {
+    .view-mode-compact {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .view-mode-compact {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .view-mode-compact {
+      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+   | Mini Galería de Tarjetas de Producto
+   * ---------------------------------------------------------------------- */
+  [data-card-gallery] [data-gallery-dot][data-active="true"] {
+    @apply bg-white w-5 opacity-100;
+  }
+}
+
+/* Sombra e iluminación verde sutil debajo del header */
+header[data-header] {
+  box-shadow: 0 8px 30px -6px rgba(16, 185, 129, 0.16), 0 2px 12px -3px rgba(16, 185, 129, 0.08) !important;
+  border-bottom-color: rgba(16, 185, 129, 0.2) !important;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Efecto de brillo metálico y resplandor verde premium para logos */
+.rb-logo-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  border-radius: 8px;
+}
+
+/* Máscaras para recortar el brillo diagonal exactamente sobre la forma del logo */
+header[data-header] .rb-logo-wrapper::after {
+  -webkit-mask-image: url('../images/racing-bike-horizontal.png');
+  mask-image: url('../images/racing-bike-horizontal.png');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+footer .rb-logo-wrapper::after {
+  -webkit-mask-image: url('../images/logo-blanco.svg');
+  mask-image: url('../images/logo-blanco.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.rb-logo-wrapper {
+  position: relative;
+  overflow: hidden;
+  perspective: 1000px;
+}
+
+.rb-logo-wrapper img {
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), filter 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform, filter;
+}
+
+.rb-logo-wrapper:hover img {
+  transform: scale(1.06) rotateY(-8deg) rotateX(6deg);
+  filter: drop-shadow(0 6px 18px rgba(16, 185, 129, 0.55)) drop-shadow(0 0 2px rgba(16, 185, 129, 0.3));
+}
+
+.rb-logo-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(16, 185, 129, 0) 0%,
+    rgba(16, 185, 129, 0.45) 50%,
+    rgba(16, 185, 129, 0) 100%
+  );
+  transform: skewX(-25deg);
+  transition: none;
+  pointer-events: none;
+}
+
+.rb-logo-wrapper:hover::after {
+  left: 150%;
+  transition: left 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Filtro para logos de marcas aliadas: blanco por defecto, verde corporativo (#10b981) en hover */
+.brand-logo-white-green {
+  filter: brightness(0) invert(1) opacity(0.95);
+  transition: filter 0.3s ease, transform 0.3s ease;
+  will-change: filter, transform;
+}
+
+.brand-logo-white-green:hover {
+  filter: invert(58%) sepia(87%) saturate(415%) hue-rotate(111deg) brightness(98%) contrast(92%) opacity(1);
+  transform: scale(1.08);
+}
+

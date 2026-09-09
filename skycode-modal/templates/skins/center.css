@@ -1,0 +1,52 @@
+.skc-md-skin-center .skc-md-panel {
+    max-width: 480px;
+    margin: auto;
+    border-radius: 16px;
+}
+
+/*
+ * En móvil el panel ocupaba el 100% del ancho (pegado a los bordes laterales)
+ * mientras arriba y abajo quedaba ~5vh: los márgenes no coincidían.
+ *
+ * Aquí el panel se fija al hueco disponible menos un mismo margen en los
+ * cuatro lados. Para que ese margen sea idéntico SIEMPRE (y no sólo cuando el
+ * contenido llena el alto), el panel ocupa toda la altura disponible y la
+ * imagen absorbe el espacio sobrante con `flex` + `object-fit: cover`.
+ * Así el botón nunca queda cortado y los cuatro huecos son iguales.
+ *
+ * Sólo se aplica cuando la campaña tiene imagen (.skc-md-has-image); sin
+ * imagen se mantiene un panel compacto centrado, que es lo correcto ahí.
+ */
+@media (max-width: 600px) {
+    .skc-md-skin-center .skc-md-panel {
+        --skc-md-gutter: 1.25rem;
+        width: calc(100% - (var(--skc-md-gutter) * 2));
+        max-width: none;
+        max-height: calc(100% - (var(--skc-md-gutter) * 2));
+        margin: var(--skc-md-gutter);
+        padding: 1.5rem;
+        border-radius: 14px;
+    }
+
+    .skc-md-skin-center.skc-md-has-image .skc-md-panel {
+        height: calc(100% - (var(--skc-md-gutter) * 2));
+        display: flex;
+        flex-direction: column;
+    }
+
+    .skc-md-skin-center.skc-md-has-image .skc-md-media {
+        flex: 1 1 auto;
+        min-height: 110px;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+
+    .skc-md-skin-center.skc-md-has-image .skc-md-media > img:not(.skc-md-watermark) {
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .skc-md-skin-center.skc-md-has-image .skc-md-body {
+        flex: 0 0 auto;
+    }
+}

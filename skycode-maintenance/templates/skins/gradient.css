@@ -1,0 +1,20 @@
+body{background-image:linear-gradient(135deg, var(--skc-accent) 0%, rgba(0,0,0,.6) 100%);}
+.skc-mm-wrap{max-width:680px;padding:clamp(28px,5vw,56px);text-align:center;}
+.skc-mm-logo{max-width:clamp(120px,25vw,160px);margin-bottom:clamp(16px,4vw,28px);filter:drop-shadow(0 4px 12px rgba(0,0,0,.3));}
+.skc-mm-headline{font-size:clamp(1.8rem,6vw,2.6rem);font-weight:800;margin:0 0 clamp(8px,2vw,16px);text-shadow:0 2px 12px rgba(0,0,0,.25);}
+.skc-mm-subtext{font-size:clamp(0.95rem,2vw,1.1rem);opacity:.9;margin:0 0 clamp(16px,4vw,32px);}
+.skc-mm-countdown{display:flex;gap:clamp(12px,3vw,20px);justify-content:center;margin-bottom:clamp(16px,4vw,32px);font-variant-numeric:tabular-nums;flex-wrap:nowrap;}
+.skc-mm-countdown span[data-unit]{font-size:clamp(1.4rem,5vw,2rem);font-weight:800;background:rgba(255,255,255,.15);padding:clamp(6px,1.5vw,8px) clamp(10px,2vw,14px);border-radius:clamp(6px,1vw,10px);}
+.skc-mm-cd-item{display:inline-flex;align-items:flex-end;gap:4px;}
+.skc-mm-cd-label{font-size:clamp(0.6rem,1.5vw,0.7rem);opacity:.8;margin-bottom:clamp(4px,1vw,8px);}
+.skc-mm-subscribe{display:flex;gap:clamp(6px,1.5vw,10px);max-width:100%;margin:0 auto clamp(12px,3vw,24px);flex-wrap:wrap;justify-content:center;}
+.skc-mm-subscribe input[type=email]{flex:1;min-width:200px;max-width:100%;padding:clamp(12px,2vw,14px) clamp(12px,2vw,16px);border-radius:clamp(20px,2vw,30px);border:0;background:rgba(255,255,255,.2);color:#fff;font-size:1rem;}
+.skc-mm-subscribe input[type=email]::placeholder{color:rgba(255,255,255,.6);}
+.skc-mm-subscribe button{padding:clamp(12px,2vw,14px) clamp(20px,3vw,24px);border:0;border-radius:clamp(20px,2vw,30px);background:#fff;color:#111;font-weight:700;cursor:pointer;font-size:0.95rem;white-space:nowrap;}
+.skc-mm-subscribe .skc-mm-hp{position:absolute;left:-9999px;width:1px;height:1px;}
+.skc-mm-subscribe-msg{width:100%;font-size:clamp(0.8rem,1.5vw,0.85rem);opacity:.9;margin:clamp(4px,1vw,8px) 0 0;}
+.skc-mm-socials{display:flex;gap:clamp(12px,2vw,18px);justify-content:center;margin-bottom:clamp(12px,3vw,24px);flex-wrap:wrap;}
+.skc-mm-socials a{color:#fff;opacity:.9;text-decoration:none;font-weight:600;font-size:clamp(0.8rem,1.5vw,0.9rem);}
+.skc-mm-custom{margin-bottom:clamp(12px,3vw,24px);}
+.skc-mm-footer{font-size:clamp(0.75rem,1.5vw,0.8rem);opacity:.7;}
+@media(max-width:480px){.skc-mm-wrap{padding:16px;}.skc-mm-countdown{flex-wrap:wrap;row-gap:8px;}.skc-mm-subscribe{gap:4px;}.skc-mm-subscribe input[type=email]{font-size:16px;}}

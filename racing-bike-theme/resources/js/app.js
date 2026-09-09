@@ -1,0 +1,1973 @@
+import './bike-builder.js';
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+/* -------------------------------------------------------------------------
+ | Vídeos del hero: sólo se descarga el que corresponde al viewport actual.
+ | Los <video> del carrusel llevan data-video-src en vez de src para que el
+ | navegador no los precargue al parsear el HTML (display:none no evita la
+ | descarga). Aquí se activa uno solo según matchMedia, y si el viewport
+ | cambia de banda (girar el móvil, redimensionar) se activa el otro bajo
+ | demanda — nunca los dos a la vez.
+ * ---------------------------------------------------------------------- */
+
+function initHeroVideos() {
+  const videos = document.querySelectorAll('video[data-video-src]');
+  if (!videos.length) return;
+
+  const desktopQuery = window.matchMedia('(min-width: 768px)');
+  const variantFor = () => (desktopQuery.matches ? 'desktop' : 'mobile');
+
+  const activate = () => {
+    const variant = variantFor();
+    videos.forEach((video) => {
+      if (video.dataset.videoVariant !== variant || video.dataset.videoActivated) return;
+      video.dataset.videoActivated = 'true';
+      video.src = video.dataset.videoSrc;
+      video.load();
+      video.play().catch(() => {});
+    });
+  };
+
+  activate();
+  desktopQuery.addEventListener('change', activate);
+}
+
+initHeroVideos();
+
+/* -------------------------------------------------------------------------
+ | Paneles off-canvas: menú móvil, carrito, filtros, quick view
+ * ---------------------------------------------------------------------- */
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getFocusable(container) {
+  return [...container.querySelectorAll(FOCUSABLE_SELECTOR)].filter(
+    (el) => el.offsetWidth || el.offsetHeight || el.getClientRects().length
+  );
+}
+
+function initDrawer({ drawerSelector, openSelector, closeSelector, expandedTargetSelector }) {
+  const drawer = document.querySelector(drawerSelector);
+  if (!drawer) return;
+
+  const openTriggers = document.querySelectorAll(openSelector);
+  const closeTriggers = drawer.querySelectorAll(closeSelector);
+  const expandedTarget = expandedTargetSelector ? document.querySelector(expandedTargetSelector) : null;
+
+  // Cerrado por defecto: fuera del árbol de accesibilidad y del orden de
+  // tabulación. Sin esto, los enlaces del menú/carrito son alcanzables con
+  // Tab aunque estén invisibles (opacity no basta — ver app.css `.drawer`).
+  drawer.inert = true;
+
+  let lastFocused = null;
+
+  const setOpen = (isOpen) => {
+    drawer.dataset.open = String(isOpen);
+    drawer.inert = !isOpen;
+    document.body.classList.toggle('overflow-hidden', isOpen);
+    expandedTarget?.setAttribute('aria-expanded', String(isOpen));
+
+    if (isOpen) {
+      lastFocused = document.activeElement;
+      // Al panel, no al overlay: el primer control real dentro del drawer.
+      drawer.querySelector('[data-drawer-panel] button, .drawer-panel button, .drawer-panel a')?.focus();
+    } else {
+      lastFocused?.focus();
+    }
+  };
+
+  openTriggers.forEach((trigger) => trigger.addEventListener('click', () => setOpen(true)));
+  closeTriggers.forEach((trigger) => trigger.addEventListener('click', () => setOpen(false)));
+
+  document.addEventListener('keydown', (event) => {
+    if (drawer.dataset.open !== 'true') return;
+
+    if (event.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
+
+    // Trampa de foco: con el panel abierto, Tab no debe poder escapar hacia
+    // la página de detrás (que aria-modal="true" ya declara inaccesible a
+    // lectores de pantalla, pero sin esto seguía siendo operable con teclado).
+    if (event.key === 'Tab') {
+      const focusable = getFocusable(drawer);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+}
+
+initDrawer({
+  drawerSelector: '[data-nav-drawer]',
+  openSelector: '[data-nav-open]',
+  closeSelector: '[data-nav-close]',
+  expandedTargetSelector: '[data-nav-open]',
+});
+
+initDrawer({
+  drawerSelector: '[data-cart-drawer]',
+  openSelector: '[data-cart-open]',
+  closeSelector: '[data-cart-close]',
+});
+
+initDrawer({
+  drawerSelector: '[data-size-guide-drawer]',
+  openSelector: '[data-size-guide-open]',
+  closeSelector: '[data-size-guide-close]',
+});
+
+initDrawer({
+  drawerSelector: '[data-filter-drawer]',
+  openSelector: '[data-filter-open]',
+  closeSelector: '[data-filter-close]',
+});
+
+/* -------------------------------------------------------------------------
+ | Acordeón de la navegación móvil
+ * ---------------------------------------------------------------------- */
+
+document.querySelectorAll('[data-accordion-toggle]').forEach((toggle) => {
+  toggle.addEventListener('click', () => {
+    const panel = document.getElementById(toggle.getAttribute('aria-controls'));
+    const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+
+    toggle.setAttribute('aria-expanded', String(!isOpen));
+    panel?.classList.toggle('hidden', isOpen);
+    toggle.querySelector('[data-accordion-icon]')?.classList.toggle('rotate-180', !isOpen);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ | Mega menú: el hover y el foco los resuelve CSS; aquí sólo Escape.
+ * ---------------------------------------------------------------------- */
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+
+  const openPanel = document.querySelector('[data-mega-panel]:hover, [data-mega-menu] li:focus-within [data-mega-panel]');
+  if (openPanel) document.activeElement?.blur();
+});
+
+/* -------------------------------------------------------------------------
+ | Barra de anuncios: rotación y descarte persistente
+ * ---------------------------------------------------------------------- */
+
+(function initAnnouncementBar() {
+  const bar = document.querySelector('[data-announcement-bar]');
+  if (!bar) return;
+
+  bar.querySelector('[data-announcement-dismiss]')?.addEventListener('click', () => {
+    bar.style.display = 'none';
+  });
+})();
+
+
+
+/* -------------------------------------------------------------------------
+ | Carrusel del hero
+ |
+ | El desplazamiento y el snap los hace CSS. Aquí sólo se añade autoplay,
+ | los puntos y la sincronización del estado al hacer scroll manual.
+ * ---------------------------------------------------------------------- */
+
+// Función nombrada (no sólo el forEach de abajo) para poder inicializar
+// también pasarelas que se llenan después, por JS — como "Vistos
+// recientemente" — una vez que sus tarjetas ya están en el DOM.
+function initCarousel(carousel) {
+  const track = carousel.querySelector('[data-carousel-track]');
+  const dotsContainer = carousel.querySelector('[data-carousel-dots]');
+  const pauseButton = carousel.querySelector('[data-carousel-pause]');
+  const liveRegion = carousel.querySelector('[data-carousel-live]');
+  const contextId = carousel.dataset.ga4ContextId || '';
+
+  let slides = [...carousel.querySelectorAll('[data-carousel-slide]')];
+  let dots = dotsContainer ? [] : [...carousel.querySelectorAll('[data-carousel-dot]')];
+
+  if (!track || slides.length < 2) return;
+
+  const alreadyReady = carousel.dataset.carouselReady === 'true';
+  carousel.dataset.carouselReady = 'true';
+
+  let current = 0;
+  let timer = null;
+  let resumeTimer = null;
+
+  // Pausa DEFINITIVA (botón de pausa): nada la levanta salvo pulsar de
+  // nuevo. Requisito de WCAG 2.2.2 — el contenido en movimiento debe poder
+  // pararse, y quedarse parado.
+  let paused = false;
+
+  // Pausa TEMPORAL (flecha, punto o swipe): el usuario está mirando otra
+  // diapositiva a propósito, no pidió apagar el carrusel — se reanuda sola
+  // tras un rato sin más interacción, para no competir con quien lee.
+  let manuallyPaused = false;
+  const RESUME_DELAY = 15000;
+
+  const syncDots = () => {
+    dots.forEach((dot, index) => {
+      dot.dataset.active = String(index === current);
+    });
+  };
+
+  const announce = () => {
+    if (liveRegion) {
+      liveRegion.textContent = `Diapositiva ${current + 1} de ${slides.length}`;
+    }
+  };
+
+  const goTo = (index) => {
+    current = (index + slides.length) % slides.length;
+    track.scrollTo({ left: slides[current].offsetLeft, behavior: 'smooth' });
+    syncDots();
+  };
+
+  const start = () => {
+    if (prefersReducedMotion.matches || paused || manuallyPaused || carousel.dataset.autoplay !== 'true') return;
+    stop();
+    timer = setInterval(() => goTo(current + 1), Number(carousel.dataset.interval) || 8000);
+  };
+
+  const stop = () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+  };
+
+  const stopForGood = () => {
+    paused = true;
+    manuallyPaused = false;
+    clearTimeout(resumeTimer);
+    stop();
+  };
+
+  const pauseTemporarily = () => {
+    if (paused) return;
+    manuallyPaused = true;
+    stop();
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => {
+      manuallyPaused = false;
+      start();
+    }, RESUME_DELAY);
+  };
+
+  const trackInteraction = (direction) => {
+    document.dispatchEvent(new CustomEvent('rb:carousel-interact', {
+      detail: { contextId, direction, fromSlot: current },
+    }));
+  };
+
+  const attachDotHandler = (dot, index) => {
+    dot.addEventListener('click', () => {
+      pauseTemporarily();
+      goTo(index);
+      announce();
+      trackInteraction('dot');
+    });
+  };
+
+  // Los puntos siempre los construye el JS a partir de las diapositivas
+  // reales (nunca Blade contando de antemano): así refresh() los mantiene
+  // en sincronía cuando el contenido cambia después de pintar la página.
+  const buildDots = () => {
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+    dots = slides.map((_, index) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      // El punto visual mide 2px de alto; el botón es de 24px×24px — un
+      // área táctil de 2px es casi imposible de tocar con el dedo.
+      dot.className = 'group flex h-6 w-8 items-center justify-center';
+      dot.setAttribute('data-carousel-dot', '');
+      dot.dataset.active = String(index === current);
+      dot.setAttribute('aria-label', `Ir a la diapositiva ${index + 1}`);
+
+      const bar = document.createElement('span');
+      bar.className = 'block h-0.5 w-full bg-ink-faint transition-colors group-data-[active=true]:bg-ink';
+      dot.appendChild(bar);
+
+      attachDotHandler(dot, index);
+      dotsContainer.appendChild(dot);
+      return dot;
+    });
+  };
+
+  if (!alreadyReady) {
+    if (dotsContainer) {
+      buildDots();
+    } else {
+      dots.forEach((dot, index) => attachDotHandler(dot, index));
+    }
+
+    carousel.querySelector('[data-carousel-next]')?.addEventListener('click', () => {
+      pauseTemporarily();
+      goTo(current + 1);
+      announce();
+      trackInteraction('next');
+    });
+
+    carousel.querySelector('[data-carousel-prev]')?.addEventListener('click', () => {
+      pauseTemporarily();
+      goTo(current - 1);
+      announce();
+      trackInteraction('prev');
+    });
+
+    pauseButton?.addEventListener('click', () => {
+      if (paused) {
+        paused = false;
+        start();
+        pauseButton.setAttribute('aria-label', pauseButton.dataset.pauseLabel || 'Pausar carrusel');
+        pauseButton.querySelector('[data-carousel-pause-icon]')?.classList.remove('border-r-0');
+      } else {
+        stopForGood();
+        pauseButton.setAttribute('aria-label', pauseButton.dataset.resumeLabel || 'Reanudar carrusel');
+        pauseButton.querySelector('[data-carousel-pause-icon]')?.classList.add('border-r-0');
+      }
+    });
+
+    // El usuario puede deslizar: derivar la diapositiva activa del scroll
+    // real, y contar el arrastre manual como pausa temporal.
+    let scrollTimeout = null;
+    track.addEventListener('pointerdown', () => {
+      pauseTemporarily();
+      trackInteraction('swipe');
+    }, { passive: true });
+
+    track.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        current = slides.findIndex((slide) => Math.abs(slide.offsetLeft - track.scrollLeft) < slide.offsetWidth / 2);
+        if (current < 0) current = 0;
+        syncDots();
+      }, 100);
+    }, { passive: true });
+
+    // No hacer girar un carrusel que nadie está viendo. start()/stop() ya
+    // respetan `paused`/`manuallyPaused`, así que esto nunca reanuda uno
+    // que el usuario detuvo.
+    const observer = new IntersectionObserver(
+      ([entry]) => (entry.isIntersecting ? start() : stop()),
+      { threshold: 0.4 }
+    );
+    observer.observe(carousel);
+
+    carousel.addEventListener('mouseenter', stop);
+    carousel.addEventListener('mouseleave', start);
+    carousel.addEventListener('focusin', stop);
+    carousel.addEventListener('focusout', start);
+
+    // Permite recalcular diapositivas y puntos cuando el contenido cambia
+    // después de pintar la página — p. ej. "Cargar más reseñas" o el
+    // filtro "solo con foto" del carrusel de reseñas.
+    carousel.rbCarouselRefresh = () => {
+      slides = [...carousel.querySelectorAll('[data-carousel-slide]')];
+      if (current >= slides.length) current = 0;
+      buildDots();
+      syncDots();
+    };
+  } else if (typeof carousel.rbCarouselRefresh === 'function') {
+    carousel.rbCarouselRefresh();
+  }
+}
+
+document.querySelectorAll('[data-carousel]').forEach(initCarousel);
+window.rbInitCarousel = initCarousel;
+
+/* -------------------------------------------------------------------------
+ | Vistos recientemente — 100% client-side (localStorage, sin cookies ni PII)
+ | porque con un catálogo de un puñado de productos es la única señal de
+ | personalización real: la relevancia la da lo que el propio visitante miró,
+ | no el catálogo. Se registra en cada ficha de producto y se pinta sólo en
+ | las páginas que traen el contenedor de la pasarela (hoy, la home).
+ * ---------------------------------------------------------------------- */
+
+(function initRecentlyViewed() {
+  const STORAGE_KEY = 'rb_recently_viewed';
+  const MAX_ITEMS = 12;
+
+  const readList = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const writeList = (list) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {
+      // localStorage no disponible (navegación privada, cuota llena, etc.): degradar en silencio.
+    }
+  };
+
+  const viewEl = document.querySelector('[data-rb-track-view]');
+  let currentProduct = null;
+
+  if (viewEl) {
+    try {
+      currentProduct = JSON.parse(viewEl.getAttribute('data-rb-track-view'));
+    } catch (e) {
+      currentProduct = null;
+    }
+  }
+
+  // Registrar la vista actual del producto, si la página trae sus datos.
+  if (currentProduct && currentProduct.id) {
+    const list = readList().filter((p) => p.id !== currentProduct.id);
+    list.unshift(currentProduct);
+    writeList(list.slice(0, MAX_ITEMS));
+  }
+
+  // Pintar la pasarela, si esta página tiene un contenedor para ella.
+  const shelf = document.querySelector('[data-recently-viewed-shelf]');
+  const track = document.querySelector('[data-recently-viewed-track]');
+  if (!shelf || !track) return;
+
+  const excludeId = currentProduct ? currentProduct.id : null;
+  const items = readList().filter((p) => p.id !== excludeId).slice(0, 8);
+
+  if (items.length < 2) return; // Nada real que mostrar todavía: mejor no dejar una pasarela vacía.
+
+  const currency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
+  items.forEach((item, index) => {
+    const card = document.createElement('a');
+    card.href = item.url || '#';
+    card.className = 'group block w-[46%] shrink-0 snap-start sm:w-[31%] lg:w-[22%]';
+    card.setAttribute('data-carousel-slide', '');
+    card.setAttribute('data-ga4-item', '');
+    card.setAttribute('data-ga4-list-id', 'home_recently_viewed');
+    card.setAttribute('data-ga4-list-name', 'Vistos recientemente');
+    card.setAttribute('data-ga4-item-id', String(item.id));
+    card.setAttribute('data-ga4-item-name', item.name || '');
+    card.setAttribute('data-ga4-index', String(index));
+    if (item.price) card.setAttribute('data-ga4-item-price', String(item.price));
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'aspect-4/5 overflow-hidden rounded-lg bg-surface-muted';
+
+    const img = document.createElement('img');
+    img.src = item.image || '';
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.className = 'size-full object-cover transition-transform duration-500 group-hover:scale-105';
+    imgWrap.appendChild(img);
+
+    const name = document.createElement('p');
+    name.className = 'mt-3 text-sm font-semibold text-ink line-clamp-1';
+    name.textContent = item.name || '';
+
+    const price = document.createElement('p');
+    price.className = 'mt-1 text-sm text-ink-muted';
+    price.textContent = item.price ? currency.format(item.price) : '';
+
+    card.append(imgWrap, name, price);
+    track.appendChild(card);
+  });
+
+  shelf.hidden = false;
+
+  const shelfCarousel = shelf.querySelector('[data-carousel]');
+  if (shelfCarousel && typeof window.rbInitCarousel === 'function') {
+    window.rbInitCarousel(shelfCarousel);
+  }
+})();
+
+/* -------------------------------------------------------------------------
+ | Medición de listas de producto y promociones: view_item_list, select_item,
+ | view_promotion, select_promotion, carousel_interact.
+ |
+ | Sin esto es imposible saber si una pasarela o el hero convierten o no —
+ | se lee de data-attributes que el theme ya renderiza en product-card y
+ | hero-carousel, para no duplicar lógica de item/promoción en JS.
+ * ---------------------------------------------------------------------- */
+
+(function initListAndPromotionTracking() {
+  if (typeof window.rbTrack !== 'function') return;
+
+  const seenLists = new Set();
+  const seenPromotions = new Set();
+
+  const itemFromCard = (card) => {
+    const id = card.dataset.ga4ItemId;
+    if (!id) return null;
+
+    const item = {
+      item_id: id,
+      item_name: card.dataset.ga4ItemName || '',
+      item_list_id: card.dataset.ga4ListId || undefined,
+      item_list_name: card.dataset.ga4ListName || undefined,
+    };
+
+    if (card.dataset.ga4ItemPrice) item.price = Number(card.dataset.ga4ItemPrice);
+    if (card.dataset.ga4Index !== undefined) item.index = Number(card.dataset.ga4Index);
+
+    return item;
+  };
+
+  // view_item_list: una vez por lista, cuando al menos una tarjeta entra en viewport.
+  const listGroups = new Map();
+  document.querySelectorAll('[data-ga4-item][data-ga4-list-id]').forEach((card) => {
+    const listId = card.dataset.ga4ListId;
+    if (!listGroups.has(listId)) listGroups.set(listId, []);
+    listGroups.get(listId).push(card);
+  });
+
+  listGroups.forEach((cards, listId) => {
+    const listObserver = new IntersectionObserver((entries) => {
+      if (seenLists.has(listId) || !entries.some((entry) => entry.isIntersecting)) return;
+      seenLists.add(listId);
+
+      window.rbTrack('view_item_list', {
+        item_list_id: listId,
+        item_list_name: cards[0].dataset.ga4ListName || listId,
+        items: cards.map(itemFromCard).filter(Boolean),
+      });
+
+      listObserver.disconnect();
+    }, { threshold: 0.3 });
+
+    cards.forEach((card) => listObserver.observe(card));
+  });
+
+  // select_item: click en cualquier parte de una tarjeta con datos de lista.
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-ga4-item][data-ga4-list-id]');
+    if (!card) return;
+
+    const item = itemFromCard(card);
+    if (!item) return;
+
+    window.rbTrack('select_item', {
+      item_list_id: item.item_list_id,
+      item_list_name: item.item_list_name,
+      items: [item],
+    });
+  });
+
+  // view_promotion: cada diapositiva del hero, una vez.
+  document.querySelectorAll('[data-ga4-promotion-id]').forEach((slide) => {
+    const promotionId = slide.dataset.ga4PromotionId;
+
+    const promoObserver = new IntersectionObserver((entries) => {
+      if (seenPromotions.has(promotionId) || !entries.some((entry) => entry.isIntersecting)) return;
+      seenPromotions.add(promotionId);
+
+      window.rbTrack('view_promotion', {
+        promotion_id: promotionId,
+        promotion_name: slide.dataset.ga4PromotionName || '',
+        creative_slot: slide.dataset.ga4Slot || '',
+      });
+
+      promoObserver.disconnect();
+    }, { threshold: 0.5 });
+
+    promoObserver.observe(slide);
+  });
+
+  // select_promotion: click en el CTA de una diapositiva.
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('a')) return;
+
+    const slide = e.target.closest('[data-ga4-promotion-id]');
+    if (!slide) return;
+
+    window.rbTrack('select_promotion', {
+      promotion_id: slide.dataset.ga4PromotionId,
+      promotion_name: slide.dataset.ga4PromotionName || '',
+      creative_slot: slide.dataset.ga4Slot || '',
+    });
+  });
+
+  // carousel_interact: flechas, puntos y swipe — el propio carrusel lo despacha.
+  document.addEventListener('rb:carousel-interact', (e) => {
+    window.rbTrack('carousel_interact', {
+      list_id: (e.detail && e.detail.contextId) || '',
+      direction: (e.detail && e.detail.direction) || '',
+      from_slot: (e.detail && e.detail.fromSlot) || 0,
+    });
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Swatches de talla del marco
+ |
+ | WooCommerce necesita su <select> para calcular precio y disponibilidad, así
+ | que no se sustituye: se oculta y se conduce desde los botones. Si este script
+ | no corre, `.no-js` deja el select visible y la ficha sigue siendo comprable.
+ * ---------------------------------------------------------------------- */
+window.initSwatches = function() {
+  document.querySelectorAll('.variations_form').forEach((form) => {
+    const priceContainer = form.closest('.grid')?.querySelector('.rb-woo-price') || document.querySelector('.rb-woo-price');
+    if (priceContainer && !priceContainer.dataset.originalPrice) {
+      priceContainer.dataset.originalPrice = priceContainer.innerHTML;
+    }
+
+    form.querySelectorAll('.variations select').forEach((select) => {
+      const row = select.closest('td') || select.parentElement;
+      if (!row || row.querySelector('.rb-swatches')) return;
+
+      const labelEl = form.querySelector(`label[for="${select.id}"]`) || row.closest('tr')?.querySelector('th label');
+      const baseLabelText = labelEl ? (labelEl.dataset.baseText || labelEl.textContent.trim().replace(/:.*/, '')) : 'Talla del marco';
+      if (labelEl && !labelEl.dataset.baseText) labelEl.dataset.baseText = baseLabelText;
+
+      const list = document.createElement('div');
+      list.className = 'rb-swatches';
+      list.setAttribute('role', 'group');
+      list.setAttribute('aria-label', baseLabelText || 'Opciones');
+
+      const options = [...select.options].filter((option) => option.value !== '');
+
+      options.forEach((option) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'rb-swatch';
+        button.textContent = option.textContent;
+        button.dataset.value = option.value;
+        button.dataset.selected = String(select.value === option.value);
+
+        button.addEventListener('click', () => {
+          // Volver a pulsar la talla activa la deselecciona o selecciona
+          const newValue = select.value === option.value ? '' : option.value;
+          select.value = newValue;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+
+          if (window.jQuery) {
+            window.jQuery(select).val(newValue).trigger('change');
+            window.jQuery(form).trigger('check_variations');
+          }
+
+          // Sincronizar estado visual de los botones inmediatamente
+          list.querySelectorAll('.rb-swatch').forEach((b) => {
+            b.dataset.selected = String(b.dataset.value === newValue);
+          });
+
+          // Actualizar etiqueta del encabezado
+          if (labelEl) {
+            if (newValue) {
+              labelEl.innerHTML = `${baseLabelText}: <span class="text-emerald-400 font-bold ml-1">${button.textContent}</span>`;
+            } else {
+              labelEl.textContent = baseLabelText;
+            }
+          }
+        });
+
+        list.appendChild(button);
+      });
+
+      row.appendChild(list);
+
+      // Ocultar select accesiblemente
+      select.classList.add('sr-only');
+
+      const sync = () => {
+        list.querySelectorAll('.rb-swatch').forEach((button) => {
+          const option = [...select.options].find((o) => o.value === button.dataset.value);
+
+          button.dataset.selected = String(select.value === button.dataset.value);
+          button.dataset.available = String(!!option && !option.disabled);
+          button.disabled = !option || option.disabled;
+        });
+
+        if (labelEl) {
+          const activeBtn = list.querySelector('.rb-swatch[data-selected="true"]');
+          if (activeBtn) {
+            labelEl.innerHTML = `${baseLabelText}: <span class="text-emerald-400 font-bold ml-1">${activeBtn.textContent}</span>`;
+          } else {
+            labelEl.textContent = baseLabelText;
+          }
+        }
+      };
+
+      select.addEventListener('change', sync);
+
+      if (window.jQuery) {
+        window.jQuery(form).on('woocommerce_update_variation_values reset_data show_variation hide_variation', sync);
+        
+        window.jQuery(form).on('show_variation', (event, variation) => {
+          if (variation && variation.price_html && priceContainer) {
+            priceContainer.innerHTML = variation.price_html;
+          }
+        });
+
+        window.jQuery(form).on('reset_data', () => {
+          if (priceContainer && priceContainer.dataset.originalPrice) {
+            priceContainer.innerHTML = priceContainer.dataset.originalPrice;
+          }
+          if (labelEl) labelEl.textContent = baseLabelText;
+        });
+      }
+
+      sync();
+    });
+  });
+};
+
+// Inicializar en la carga inicial de la página
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.initSwatches === 'function') {
+    window.initSwatches();
+  }
+});
+window.initSwatches();
+/* -------------------------------------------------------------------------
+ | Selector de cantidad
+ * ---------------------------------------------------------------------- */
+
+document.querySelectorAll('[data-quantity-input]').forEach((wrapper) => {
+  const input = wrapper.querySelector('[data-quantity-value]');
+  const decrement = wrapper.querySelector('[data-quantity-decrement]');
+  const increment = wrapper.querySelector('[data-quantity-increment]');
+
+  decrement?.addEventListener('click', () => {
+    const min = Number(input.min) || 1;
+    input.value = String(Math.max(min, Number(input.value) - 1));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  increment?.addEventListener('click', () => {
+    const max = input.max ? Number(input.max) : Infinity;
+    input.value = String(Math.min(max, Number(input.value) + 1));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+});
+
+/* -------------------------------------------------------------------------
+ | Barra flotante de compra (Sticky Buy Bar) en Ficha de Producto
+ * ---------------------------------------------------------------------- */
+
+(function initStickyBuyBar() {
+  const stickyBar = document.querySelector('[data-sticky-buy-bar]');
+  const trigger = document.querySelector('.rb-woo-add-to-cart');
+  if (!stickyBar || !trigger) return;
+
+  const waBtn = document.querySelector('[data-whatsapp-button]');
+  const scrollBtn = document.querySelector('[data-scroll-up]');
+  const cookieBanner = document.getElementById('cookie-banner');
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const isHidden = entry.isIntersecting;
+        stickyBar.classList.toggle('translate-y-full', isHidden);
+        stickyBar.classList.toggle('opacity-0', isHidden);
+
+        if (waBtn) {
+          if (isHidden) {
+            waBtn.style.bottom = '';
+          } else {
+            waBtn.style.bottom = '96px';
+          }
+        }
+
+        if (scrollBtn) {
+          if (isHidden) {
+            scrollBtn.style.bottom = '';
+          } else {
+            scrollBtn.style.bottom = '96px';
+          }
+        }
+
+        // El banner de cookies (z-[200], por encima de la barra) le ganaba
+        // el toque a "Comprar" en móvil apenas aparecía: mismo tratamiento
+        // que el botón de WhatsApp para que nunca se solapen.
+        if (cookieBanner) {
+          if (isHidden) {
+            cookieBanner.style.bottom = '';
+          } else {
+            cookieBanner.style.bottom = '96px';
+          }
+        }
+      });
+    },
+    { threshold: 0.1 }
+  );
+
+  observer.observe(trigger);
+
+  // El botón dice "Comprar", así que debe comprar — antes sólo hacía scroll y
+  // enfocaba el botón real sin agregar nada. Un usuario que no ve el carrito
+  // reaccionar hace clic otra vez en el botón real ya enfocado, y termina con
+  // dos unidades por una sola intención de compra.
+  const actionBtn = stickyBar.querySelector('[data-sticky-action]');
+  actionBtn?.addEventListener('click', () => {
+    const formBtn = trigger.querySelector('button[type="submit"], .single_add_to_cart_button');
+    if (!formBtn) return;
+
+    const form = formBtn.closest('form.cart');
+    const needsVariation = form?.classList.contains('variations_form');
+    const variationInput = form?.querySelector('input.variation_id, input[name="variation_id"]');
+    const hasVariation = !needsVariation || (variationInput && variationInput.value && variationInput.value !== '0');
+
+    if (hasVariation) {
+      // Todo listo para comprar: el clic en "Comprar" completa la compra de
+      // una vez, reutilizando el mismo botón (y su guardia anti-doble-envío)
+      // en vez de duplicar la lógica de envío aquí.
+      formBtn.click();
+    } else {
+      // Falta elegir talla/opción: llevar al usuario a elegirla, no se puede
+      // comprar todavía.
+      formBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      formBtn.focus();
+    }
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Cabecera transparente en Scroll (Sticky Header Transparency)
+ * ---------------------------------------------------------------------- */
+
+(function initStickyHeaderScroll() {
+  const header = document.querySelector('[data-header]');
+  if (!header) return;
+
+  const handleScroll = () => {
+    if (window.scrollY > 40) {
+      header.classList.remove('bg-surface/95', 'border-line');
+      header.classList.add('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]');
+    } else {
+      header.classList.remove('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]');
+      header.classList.add('bg-surface/95', 'border-line');
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll(); // Chequeo inicial
+})();
+
+/* -------------------------------------------------------------------------
+ | Quick-Add, Quick-View y Carrito AJAX Global
+ * ---------------------------------------------------------------------- */
+
+function openCartDrawer() {
+  const cartDrawer = document.querySelector('[data-cart-drawer]');
+  if (cartDrawer) {
+    cartDrawer.dataset.open = 'true';
+    cartDrawer.inert = false;
+    document.body.classList.add('overflow-hidden');
+    const openTrigger = document.querySelector('[data-cart-open]');
+    if (openTrigger) {
+      openTrigger.setAttribute('aria-expanded', 'true');
+    }
+    cartDrawer.querySelector('[data-drawer-panel] button, .drawer-panel button, .drawer-panel a')?.focus();
+  }
+}
+
+// Quick Add para productos simples y add-ons con protección estricta contra doble clic
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-quick-add], [data-add-addon]');
+  if (!btn) return;
+
+  // Si ya está procesando una petición o está deshabilitado, abortar inmediatamente
+  if (btn.dataset.adding === 'true' || btn.disabled) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Bloqueo inmediato en vuelo
+  btn.dataset.adding = 'true';
+  btn.disabled = true;
+  btn.style.pointerEvents = 'none';
+  btn.classList.add('opacity-50');
+
+  const productId = btn.dataset.quickAdd || btn.dataset.addAddon;
+
+  const formData = new FormData();
+  formData.append('action', 'rb_quick_add');
+  formData.append('product_id', productId);
+  formData.append('quantity', '1');
+
+  fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
+    method: 'POST',
+    body: formData,
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.fragments) {
+        Object.entries(data.fragments).forEach(([selector, html]) => {
+          const el = document.querySelector(selector);
+          if (el) el.outerHTML = html;
+        });
+      }
+
+      if (data.success || data.fragments) {
+        openCartDrawer();
+
+        if (data.ga4_item && window.rbTrack) {
+          const lineValue = data.ga4_item.price * data.ga4_item.quantity;
+          window.rbTrack('add_to_cart', {
+            currency: 'COP',
+            value: lineValue,
+            items: [data.ga4_item],
+          }, 'AddToCart', {
+            content_ids: [String(data.ga4_item.item_id)],
+            content_type: 'product',
+            value: lineValue,
+            currency: 'COP',
+          });
+        }
+      } else {
+        const qvBtn = document.querySelector(`[data-quick-view="${productId}"]`);
+        if (qvBtn) {
+          qvBtn.click();
+        } else {
+          alert(data.data?.message || data.message || 'Error al agregar el producto.');
+        }
+      }
+    })
+    .catch((err) => {
+      console.error('Error en quick add:', err);
+    })
+    .finally(() => {
+      btn.dataset.adding = 'false';
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.classList.remove('opacity-50');
+    });
+}, true);
+
+// Quick View para productos variables y simples
+(function initQuickView() {
+  const modal = document.querySelector('[data-quick-view-modal]');
+  const target = modal?.querySelector('[data-quick-view-target]');
+  if (!modal || !target) return;
+
+  modal.inert = true;
+
+  // Mismo tratamiento de foco que initDrawer (carrito, filtros, guía de
+  // tallas) — este modal no pasaba por ahí y se quedaba sin restaurar el
+  // foco al cerrar ni ciclar Tab dentro de él.
+  let lastFocused = null;
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    modal.inert = true;
+    document.body.classList.remove('overflow-hidden');
+    lastFocused?.focus();
+    target.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-20 text-ink-subtle gap-4">
+        <svg class="size-8 animate-spin text-emerald-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-xs uppercase tracking-widest text-ink-muted">Cargando especificaciones...</span>
+      </div>
+    `;
+  }
+
+  // Apertura del modal
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-quick-view]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const productId = btn.dataset.quickView;
+    lastFocused = document.activeElement;
+    modal.inert = false;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    modal.querySelector('[data-quick-view-close], [data-close-quick-view]')?.focus();
+
+    fetch(`${window.rbAjax?.url ?? '/wp-admin/admin-ajax.php'}?action=rb_quick_view&product_id=${productId}`)
+      .then((res) => res.text())
+      .then((html) => {
+        target.innerHTML = html;
+        // Con el contenido real ya en el DOM, el primer control útil
+        // (no el botón de cerrar, que solo existía como ancla temporal).
+        getFocusable(modal)[0]?.focus();
+
+        // Inicializar swatches de WooCommerce
+        if (typeof window.initSwatches === 'function') {
+          window.initSwatches();
+        }
+
+        // Re-inicializar plugin nativo wc_variation_form si existe jQuery
+        if (window.jQuery) {
+          const $form = window.jQuery(target).find('.variations_form');
+          if ($form.length > 0) {
+            $form.wc_variation_form();
+          }
+        }
+
+        // Miniaturas de galería interactivas dentro del modal
+        const mainImg = target.querySelector('#qv-main-image');
+        const thumbs = target.querySelectorAll('[data-qv-thumb]');
+        thumbs.forEach((thumbBtn) => {
+          thumbBtn.addEventListener('click', () => {
+            const newSrc = thumbBtn.getAttribute('data-qv-thumb');
+            if (mainImg && newSrc) {
+              mainImg.src = newSrc;
+              thumbs.forEach((t) => {
+                t.classList.remove('border-white', 'ring-2', 'ring-white/20', 'opacity-100');
+                t.classList.add('border-line/60', 'opacity-60');
+              });
+              thumbBtn.classList.remove('border-line/60', 'opacity-60');
+              thumbBtn.classList.add('border-white', 'ring-2', 'ring-white/20', 'opacity-100');
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        target.innerHTML = `<p class="text-sm text-red-400 py-8 text-center">Error al cargar la vista rápida del producto.</p>`;
+      });
+  }, true);
+
+  // Cerrar modal al hacer clic/tap en cualquier disparador de cierre o backdrop
+  document.addEventListener('click', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    if (e.target === modal || e.target.closest('[data-quick-view-close], [data-close-quick-view]')) {
+      e.preventDefault();
+      closeModal();
+    }
+  });
+
+  // Cerrar modal con tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('hidden')) return;
+
+    if (e.key === 'Escape') {
+      closeModal();
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const focusable = getFocusable(modal);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+})();
+
+// Interceptar formularios de añadir al carrito GLOBALMENTE (Single Product + Quick View Modal)
+document.addEventListener('submit', (e) => {
+  const form = e.target.closest('form.cart');
+  if (!form) return;
+
+  // No interceptar si ya estamos en la página final de checkout
+  if (document.body.classList.contains('woocommerce-checkout')) {
+    return;
+  }
+
+  // Prevenir envíos dobles o múltiples peticiones simultáneas
+  if (form.dataset.submitting === 'true') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return;
+  }
+
+  e.preventDefault();
+  form.dataset.submitting = 'true';
+
+  const submitBtn = e.submitter || form.querySelector('button[type="submit"], .single_add_to_cart_button');
+  const originalText = submitBtn ? submitBtn.innerHTML : 'Añadir al carrito';
+
+  // Si es producto variable y no se ha seleccionado talla, seleccionar automáticamente la primera disponible o alertar
+  if (form.classList.contains('variations_form')) {
+    const varInput = form.querySelector('input.variation_id, input[name="variation_id"]');
+    const select = form.querySelector('.variations select');
+
+    if (select && !select.value) {
+      const firstSwatch = form.querySelector('.rb-swatch:not([disabled])');
+      if (firstSwatch) {
+        firstSwatch.click();
+      } else {
+        alert('Por favor selecciona una talla antes de añadir al carrito.');
+        form.dataset.submitting = 'false';
+        return;
+      }
+    }
+
+    // Sincronizar variation_id si viene en 0 o vacío
+    if (varInput && (!varInput.value || varInput.value === '0')) {
+      try {
+        const rawVars = form.dataset.product_variations || form.getAttribute('data-product_variations');
+        if (rawVars) {
+          const parsed = JSON.parse(rawVars);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const matching = parsed.find((v) => {
+              if (!v.attributes) return false;
+              return Object.entries(v.attributes).every(([attrName, attrVal]) => {
+                if (!attrVal) return true;
+                const field = form.querySelector(`[name="${attrName}"]`);
+                return field && field.value.toLowerCase() === attrVal.toLowerCase();
+              });
+            }) || parsed[0];
+            if (matching && matching.variation_id) {
+              varInput.value = String(matching.variation_id);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo resolver la variación localmente:', err);
+      }
+    }
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.pointerEvents = 'none';
+    submitBtn.innerHTML = `
+      <svg class="size-4 animate-spin inline-block mr-2" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Añadiendo...
+    `;
+  }
+
+  const formData = new FormData(form);
+  formData.append('action', 'rb_quick_add');
+
+  // Asegurar que siempre viaje product_id
+  if (!formData.has('product_id')) {
+    const fallbackId = formData.get('add-to-cart') ||
+      (submitBtn && submitBtn.name === 'add-to-cart' ? submitBtn.value : null) ||
+      form.querySelector('button[name="add-to-cart"]')?.value ||
+      form.querySelector('input[name="add-to-cart"]')?.value ||
+      form.querySelector('input[name="product_id"]')?.value ||
+      form.dataset.productId ||
+      form.getAttribute('data-product_id');
+
+    if (fallbackId) {
+      formData.append('product_id', fallbackId);
+    }
+  }
+
+  // "add-to-cart" es el disparador del formulario clásico de WooCommerce
+  // (WC_Form_Handler::add_to_cart_action, en wp_loaded). Esa petición SIEMPRE
+  // llega a wp_loaded aunque sea AJAX, así que enviarlo aquí hacía que
+  // WooCommerce agregara el producto una vez y rb_quick_add lo agregara otra
+  // — mismo click, el doble en el carrito. Ya no hace falta en el servidor:
+  // se usó arriba sólo para derivar product_id si faltaba.
+  formData.delete('add-to-cart');
+
+  fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
+    method: 'POST',
+    body: formData,
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.fragments) {
+        Object.entries(data.fragments).forEach(([selector, html]) => {
+          const el = document.querySelector(selector);
+          if (el) el.outerHTML = html;
+        });
+      }
+
+      if (data.success || data.fragments) {
+        // Si el modal de Quick View estaba abierto, cerrarlo
+        const modal = document.querySelector('[data-quick-view-modal]');
+        if (modal && !modal.classList.contains('hidden')) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          document.body.classList.remove('overflow-hidden');
+        }
+
+        // Abrir el drawer del carrito
+        openCartDrawer();
+
+        if (data.ga4_item && window.rbTrack) {
+          const lineValue = data.ga4_item.price * data.ga4_item.quantity;
+          window.rbTrack('add_to_cart', {
+            currency: 'COP',
+            value: lineValue,
+            items: [data.ga4_item],
+          }, 'AddToCart', {
+            content_ids: [String(data.ga4_item.item_id)],
+            content_type: 'product',
+            value: lineValue,
+            currency: 'COP',
+          });
+        }
+      } else {
+        alert(data.data?.message || data.message || 'Por favor selecciona las opciones requeridas antes de añadir al carrito.');
+      }
+    })
+    .catch((err) => {
+      console.error('Error al añadir al carrito:', err);
+    })
+    .finally(() => {
+      form.dataset.submitting = 'false';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.pointerEvents = '';
+        submitBtn.innerHTML = originalText;
+      }
+    });
+});
+
+// Escuchar evento nativo de WooCommerce 'added_to_cart'
+if (window.jQuery) {
+  window.jQuery(document.body).on('added_to_cart', (event, fragments) => {
+    if (fragments) {
+      Object.entries(fragments).forEach(([selector, html]) => {
+        const el = document.querySelector(selector);
+        if (el) el.outerHTML = html;
+      });
+    }
+    openCartDrawer();
+  });
+}
+
+// Eliminar ítem del carrito desde el Drawer
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-remove-cart-item]');
+  if (!btn) return;
+  e.preventDefault();
+
+  const cartItemKey = btn.dataset.removeCartItem;
+  const formData = new FormData();
+  formData.append('action', 'rb_remove_cart_item');
+  formData.append('cart_item_key', cartItemKey);
+  formData.append('nonce', window.rbAjax?.nonce ?? '');
+
+  fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
+    method: 'POST',
+    body: formData,
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.fragments) {
+        Object.entries(data.fragments).forEach(([selector, html]) => {
+          const el = document.querySelector(selector);
+          if (el) el.outerHTML = html;
+        });
+      }
+    });
+});
+
+// Cambiar cantidad (+ / -) desde el Mini-Carrito en tiempo real
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-change-cart-qty]');
+  if (!btn) return;
+  e.preventDefault();
+
+  const cartItemKey = btn.dataset.changeCartQty;
+  const quantity = Number(btn.dataset.qty);
+
+  btn.disabled = true;
+  btn.classList.add('opacity-50');
+
+  const formData = new FormData();
+  formData.append('action', 'rb_change_cart_qty');
+  formData.append('cart_item_key', cartItemKey);
+  formData.append('quantity', quantity);
+  formData.append('nonce', window.rbAjax?.nonce ?? '');
+
+  fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
+    method: 'POST',
+    body: formData,
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.fragments) {
+        Object.entries(data.fragments).forEach(([selector, html]) => {
+          const el = document.querySelector(selector);
+          if (el) el.outerHTML = html;
+        });
+      }
+    });
+});
+
+/* -------------------------------------------------------------------------
+ | Scroll Reveal Observer para micro-animaciones al desplazarse
+ * ---------------------------------------------------------------------- */
+
+(function initScrollReveal() {
+  const elements = document.querySelectorAll('[data-reveal]');
+  if (!elements.length) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.dataset.reveal = 'true';
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15 }
+  );
+
+  elements.forEach((el) => observer.observe(el));
+})();
+
+/* -------------------------------------------------------------------------
+ | Footer 21st.dev Text Hover Effect Observer (Puntero interactivo sobre SVG)
+ * ---------------------------------------------------------------------- */
+
+(function initFooterTextHover() {
+  const svg = document.querySelector('[data-footer-text-effect]');
+  if (!svg) return;
+
+  const mask = svg.querySelector('#rbRevealMask');
+
+  svg.addEventListener('mousemove', (e) => {
+    const rect = svg.getBoundingClientRect();
+    const cx = ((e.clientX - rect.left) / rect.width) * 100;
+    const cy = ((e.clientY - rect.top) / rect.height) * 100;
+    if (mask) {
+      mask.setAttribute('cx', `${cx}%`);
+      mask.setAttribute('cy', `${cy}%`);
+    }
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Galería de Producto Enterprise con Zoom Magnificador y Caja de Luz Modal
+ * ---------------------------------------------------------------------- */
+
+(function initEnterpriseGallery() {
+  const container = document.querySelector('[data-product-gallery]');
+  if (!container) return;
+
+  const mainContainer = container.querySelector('[data-gallery-main-container]');
+  const mainImg = container.querySelector('[data-gallery-main-img]');
+
+  // Fuente de verdad de las URLs: el Blade sólo pinta botones de miniatura
+  // cuando hay más de 1 imagen, así que con una sola imagen no existe ningún
+  // `data-gallery-thumb` del que leer la URL. Sin esta lista, abrir la caja
+  // de luz con un único producto (el caso más común) dejaba `<img>` en blanco.
+  let imageUrls = [];
+  try {
+    imageUrls = JSON.parse(container.dataset.images || '[]');
+  } catch {
+    imageUrls = [];
+  }
+  const totalImages = imageUrls.length;
+
+  // El Blade pinta dos tiras de miniaturas (escritorio vertical + móvil
+  // horizontal) para el mismo conjunto de imágenes: son vistas duplicadas
+  // del mismo índice, no diapositivas distintas. Se agrupan por data-index
+  // para que el estado activo se sincronice en ambas tiras a la vez.
+  const allThumbs = [...container.querySelectorAll('[data-gallery-thumb]')];
+  const thumbsByIndex = new Map();
+  allThumbs.forEach((thumb) => {
+    const idx = Number(thumb.dataset.index) || 0;
+    if (!thumbsByIndex.has(idx)) thumbsByIndex.set(idx, []);
+    thumbsByIndex.get(idx).push(thumb);
+  });
+
+  const lightboxModal = container.querySelector('[data-lightbox-modal]');
+  const lightboxImg = container.querySelector('[data-lightbox-img]');
+  const lightboxCounter = container.querySelector('[data-lightbox-counter]');
+  const openLightboxBtn = container.querySelector('[data-open-lightbox]');
+  const closeLightboxBtn = container.querySelector('[data-close-lightbox]');
+  const prevBtn = container.querySelector('[data-lightbox-prev]');
+  const nextBtn = container.querySelector('[data-lightbox-next]');
+
+  let currentIndex = 0;
+
+  function setActiveImage(index) {
+    if (!totalImages || index < 0 || index >= totalImages) return;
+    currentIndex = index;
+
+    thumbsByIndex.forEach((thumbsAtIndex, idx) => {
+      thumbsAtIndex.forEach((thumb) => {
+        thumb.dataset.active = idx === index ? 'true' : 'false';
+      });
+    });
+
+    const fullUrl = imageUrls[index];
+
+    if (mainImg && fullUrl) {
+      mainImg.src = fullUrl;
+      mainImg.dataset.full = fullUrl;
+    }
+
+    if (lightboxImg && fullUrl) {
+      lightboxImg.src = fullUrl;
+    }
+
+    if (lightboxCounter) {
+      lightboxCounter.textContent = `${index + 1} / ${totalImages}`;
+    }
+  }
+
+  // Evento clic en miniaturas (ambas tiras comparten el mismo manejador)
+  allThumbs.forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      const idx = Number(thumb.dataset.index) || 0;
+      setActiveImage(idx);
+    });
+  });
+
+  // Zoom de lupa al pasar el cursor en escritorio
+  if (mainContainer && mainImg) {
+    mainContainer.addEventListener('mousemove', (e) => {
+      if (window.innerWidth < 768) return;
+      const rect = mainContainer.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      mainImg.style.transformOrigin = `${x}% ${y}%`;
+      mainImg.style.transform = 'scale(2.2)';
+    });
+
+    mainContainer.addEventListener('mouseleave', () => {
+      mainImg.style.transform = 'scale(1)';
+      mainImg.style.transformOrigin = 'center center';
+    });
+
+    // Clic en la imagen abre la caja de luz
+    mainContainer.addEventListener('click', (e) => {
+      if (e.target.closest('[data-open-lightbox]')) return;
+      openLightbox();
+    });
+  }
+
+  // Apertura / Cierre de la Caja de Luz Modal
+  function openLightbox() {
+    if (!lightboxModal) return;
+    setActiveImage(currentIndex);
+    lightboxModal.classList.remove('hidden');
+    lightboxModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    if (!lightboxModal) return;
+    lightboxModal.classList.add('hidden');
+    lightboxModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  openLightboxBtn?.addEventListener('click', openLightbox);
+  closeLightboxBtn?.addEventListener('click', closeLightbox);
+
+  lightboxModal?.addEventListener('click', (e) => {
+    if (e.target === lightboxModal) closeLightbox();
+  });
+
+  prevBtn?.addEventListener('click', () => {
+    const newIdx = (currentIndex - 1 + totalImages) % totalImages;
+    setActiveImage(newIdx);
+  });
+
+  nextBtn?.addEventListener('click', () => {
+    const newIdx = (currentIndex + 1) % totalImages;
+    setActiveImage(newIdx);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightboxModal || lightboxModal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') prevBtn?.click();
+    if (e.key === 'ArrowRight') nextBtn?.click();
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Animación de Contador Dinámico para Sección de Estadísticas (0 a N)
+ * ---------------------------------------------------------------------- */
+
+(function initStatCounters() {
+  const counters = document.querySelectorAll('[data-stat-counter]');
+  if (!counters.length) return;
+
+  const animate = (counter) => {
+    const target = Number(counter.dataset.target) || 0;
+    const suffix = counter.dataset.suffix || '';
+    const duration = 1600; // Duración en ms
+    const startTime = performance.now();
+
+    function update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing out cuadrático
+      const ease = progress * (2 - progress);
+      const current = Math.floor(ease * target);
+      
+      counter.textContent = `${current}${suffix}`;
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        counter.textContent = `${target}${suffix}`;
+      }
+    }
+
+    requestAnimationFrame(update);
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          animate(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.2 }
+  );
+
+  counters.forEach((c) => observer.observe(c));
+})();
+
+/* -------------------------------------------------------------------------
+ | Efecto de Sombra y Difuminado en el Header al hacer Scroll Down
+ * ---------------------------------------------------------------------- */
+
+(function initHeaderScrollEffect() {
+  const header = document.querySelector('[data-header]');
+  const bottomBlur = document.querySelector('[data-bottom-blur]');
+  if (!header && !bottomBlur) return;
+
+  let scrollTimeout;
+
+  function checkScroll() {
+    if (window.scrollY > 20) {
+      if (header) {
+        header.classList.add('shadow-[0_10px_30px_rgba(0,0,0,0.8)]', 'bg-surface/90', 'backdrop-blur-md');
+      }
+      if (bottomBlur) {
+        bottomBlur.classList.remove('opacity-0');
+      }
+    } else {
+      if (header) {
+        header.classList.remove('shadow-[0_10px_30px_rgba(0,0,0,0.8)]', 'bg-surface/90', 'backdrop-blur-md');
+      }
+      if (bottomBlur) {
+        bottomBlur.classList.add('opacity-0');
+      }
+    }
+
+    // Si el usuario deja de hacer scroll, desvanecer la sombra de fondo
+    clearTimeout(scrollTimeout);
+    if (window.scrollY > 20 && bottomBlur) {
+      scrollTimeout = setTimeout(() => {
+        bottomBlur.classList.add('opacity-0');
+      }, 700); // Se oculta tras 700ms de inactividad de scroll
+    }
+  }
+
+  window.addEventListener('scroll', checkScroll, { passive: true });
+  checkScroll();
+})();
+
+/* -------------------------------------------------------------------------
+ | Modal de Financiación Colombiana (ADDI, Sistecrédito, PSE)
+ * ---------------------------------------------------------------------- */
+
+(function initFinancingModal() {
+  const modal = document.querySelector('[data-financing-modal]');
+  if (!modal) return;
+
+  // Mover el modal al final del body para romper el contexto de apilamiento (stacking context) y arreglar el eje Z
+  document.body.appendChild(modal);
+
+  const openBtns = document.querySelectorAll('[data-open-financing-modal]');
+  const closeBtns = modal.querySelectorAll('[data-close-financing-modal]');
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  openBtns.forEach((btn) => btn.addEventListener('click', openModal));
+  closeBtns.forEach((btn) => btn.addEventListener('click', closeModal));
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Fondo de haces de luz — verde fluorescente, ambiental en todo el sitio.
+ | Canvas + rAF puro: sin dependencia de librerías de animación.
+ * ---------------------------------------------------------------------- */
+
+(function initBeamsBackground() {
+  const canvas = document.querySelector('[data-beams-canvas]');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Verde corporativo: hue 160 (#10b981),
+  // con la saturación (84%) y luminosidad (39%) de la marca.
+  const HUE_MIN = 160;
+  const HUE_RANGE = 0;
+  const SATURATION = 84;
+  const LIGHTNESS = 39;
+
+  const BEAM_COUNT = 18;
+
+  let beams = [];
+  let animationFrame = null;
+
+  function createBeam(width, height) {
+    return {
+      x: Math.random() * width * 1.5 - width * 0.25,
+      y: Math.random() * height * 1.5 - height * 0.25,
+      width: 30 + Math.random() * 60,
+      length: height * 2.5,
+      angle: -35 + Math.random() * 10,
+      speed: 0.6 + Math.random() * 1.2,
+      opacity: 0.16 + Math.random() * 0.18,
+      hue: HUE_MIN + Math.random() * HUE_RANGE,
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.02 + Math.random() * 0.03,
+    };
+  }
+
+  function resetBeam(beam, index, total) {
+    const column = index % 3;
+    const spacing = canvas.width / 3;
+
+    beam.y = canvas.height + 100;
+    beam.x = column * spacing + spacing / 2 + (Math.random() - 0.5) * spacing * 0.5;
+    beam.width = 100 + Math.random() * 100;
+    beam.speed = 0.5 + Math.random() * 0.4;
+    beam.hue = HUE_MIN + (index * HUE_RANGE) / total;
+    beam.opacity = 0.24 + Math.random() * 0.14;
+  }
+
+  function drawBeam(beam) {
+    ctx.save();
+    ctx.translate(beam.x, beam.y);
+    ctx.rotate((beam.angle * Math.PI) / 180);
+
+    const pulsingOpacity = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2);
+    const gradient = ctx.createLinearGradient(0, 0, 0, beam.length);
+
+    gradient.addColorStop(0, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
+    gradient.addColorStop(0.1, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity * 0.5})`);
+    gradient.addColorStop(0.4, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity})`);
+    gradient.addColorStop(0.6, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity})`);
+    gradient.addColorStop(0.9, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity * 0.5})`);
+    gradient.addColorStop(1, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
+    ctx.restore();
+  }
+
+  function updateCanvasSize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+    ctx.scale(dpr, dpr);
+
+    beams = Array.from({ length: BEAM_COUNT }, () => createBeam(canvas.width, canvas.height));
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.filter = 'blur(35px)';
+
+    beams.forEach((beam, index) => {
+      beam.y -= beam.speed;
+      beam.pulse += beam.pulseSpeed;
+
+      if (beam.y + beam.length < -100) {
+        resetBeam(beam, index, beams.length);
+      }
+
+      drawBeam(beam);
+    });
+
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  updateCanvasSize();
+  window.addEventListener('resize', updateCanvasSize);
+
+  // Sin movimiento para quien lo pidió: se deja un fotograma estático
+  // en vez de animar — el resto del theme sigue la misma regla en CSS.
+  if (prefersReducedMotion.matches) {
+    ctx.filter = 'blur(35px)';
+    beams.forEach((beam) => drawBeam(beam));
+    return;
+  }
+
+  animate();
+
+  window.addEventListener('pagehide', () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Conmutador de Vistas del Catálogo y Secciones (Grid, Compact, List)
+ * ---------------------------------------------------------------------- */
+(function initViewSwitcher() {
+  const switchers = document.querySelectorAll('[data-catalog-view-switcher]');
+  switchers.forEach((switcher) => {
+    const targetSelector = switcher.getAttribute('data-target-grid') || '#catalog-grid-container';
+    const targetGrid = document.querySelector(targetSelector);
+    if (!targetGrid) return;
+
+    const buttons = switcher.querySelectorAll('[data-view-btn]');
+
+    const setMode = (mode) => {
+      buttons.forEach((b) => {
+        const isActive = b.getAttribute('data-view-btn') === mode;
+        b.setAttribute('data-active', String(isActive));
+        b.dataset.active = String(isActive);
+      });
+
+      targetGrid.classList.remove('view-mode-grid', 'view-mode-compact', 'view-mode-list');
+      if (mode === 'compact') {
+        targetGrid.classList.add('view-mode-compact');
+      } else if (mode === 'list') {
+        targetGrid.classList.add('view-mode-list');
+      } else {
+        targetGrid.classList.add('view-mode-grid');
+      }
+      localStorage.setItem('rb_catalog_view_mode', mode);
+    };
+
+    const isMobile = window.innerWidth < 768;
+    const defaultMode = isMobile ? 'compact' : 'grid';
+    const savedMode = localStorage.getItem('rb_catalog_view_mode') || defaultMode;
+    setMode(savedMode);
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-view-btn');
+        setMode(mode);
+      });
+    });
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Banner de Recomendación Personalizada de Talla
+ * ---------------------------------------------------------------------- */
+(function initSizeRecommendation() {
+  const banner = document.getElementById('rb-size-recommendation-banner');
+  if (!banner) return;
+
+  function getStoredSize() {
+    try {
+      const data = localStorage.getItem('rb_user_bike_size');
+      if (data) return JSON.parse(data);
+    } catch (e) {
+      console.error(e);
+    }
+    // Fallback de cookie
+    const match = document.cookie.match(/(?:^|; )rb_user_bike_size=([^;]*)/);
+    if (match) {
+      return { size: match[1] };
+    }
+    return null;
+  }
+
+  function autoSelectSize(sizeLetter) {
+    if (!sizeLetter) return;
+    
+    // 1. Buscar en Swatches / Botones visuales si existen
+    const swatches = [...document.querySelectorAll('.rb-swatch')];
+    let matchedSwatch = swatches.find(s => {
+      const txt = (s.textContent || '').trim().toUpperCase();
+      return txt === sizeLetter || txt.includes(sizeLetter);
+    });
+
+    if (matchedSwatch) {
+      if (matchedSwatch.dataset.selected !== 'true') {
+        matchedSwatch.click();
+      }
+    } else {
+      // 2. Fallback: Selector estándar de WooCommerce
+      const selects = document.querySelectorAll('.variations select');
+      selects.forEach(select => {
+        const option = [...select.options].find(opt => opt.value.toUpperCase().includes(sizeLetter));
+        if (option && select.value !== option.value) {
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
+  }
+
+  function updateBanner(shouldAutoSelect = false) {
+    const data = getStoredSize();
+    if (data && data.size) {
+      // Mostrar banner con talla recomendada
+      banner.innerHTML = `
+        <div class="flex items-center justify-between gap-3 p-4 rounded-xl border border-[#10b981]/30 bg-[#10b981]/5 animate-fade-in">
+          <div class="flex items-center gap-3">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#10b981] text-black font-black text-lg shadow-inner">
+              ${data.size}
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-[#10b981] uppercase tracking-wider">Talla Biomecánica Recomendada</p>
+              <p class="text-xs text-ink-muted leading-tight">Basada en tu estatura y entrepierna.</p>
+            </div>
+          </div>
+          <button type="button" data-open-size-finder class="text-xs font-bold text-ink hover:text-[#10b981] transition-colors underline cursor-pointer shrink-0">
+            Recalcular
+          </button>
+        </div>
+      `;
+      
+      if (shouldAutoSelect) {
+        autoSelectSize(data.size);
+      }
+    } else {
+      // Mostrar llamada a la acción para calcular talla
+      banner.innerHTML = `
+        <div class="flex items-center justify-between gap-3 p-4 rounded-xl border border-line bg-surface-raised">
+          <div class="flex items-center gap-3">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface border border-line text-ink-subtle text-lg">
+              📏
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-ink uppercase tracking-wider">¿No estás seguro de tu talla?</p>
+              <p class="text-xs text-ink-muted leading-tight">Calcula tu tamaño de cuadro ideal en 1 minuto.</p>
+            </div>
+          </div>
+          <button type="button" data-open-size-finder class="inline-flex items-center justify-center rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-black transition-all hover:bg-white/90 active:scale-95 cursor-pointer shadow shrink-0">
+            Calcular talla
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  // Escuchar cálculos de talla en tiempo real (solo cuando el usuario usa el modal)
+  window.addEventListener('rb_size_calculated', (e) => {
+    updateBanner(true);
+  });
+
+  // Renderizar banner informativo al cargar (sin sobreescribir la interacción del usuario)
+  updateBanner(false);
+})();
+
+/* -------------------------------------------------------------------------
+ | Modal de Búsqueda Global (Search Overlay)
+ * ---------------------------------------------------------------------- */
+(function initSearchOverlay() {
+  const overlay = document.querySelector('[data-search-overlay]');
+  if (!overlay) return;
+
+  const triggerBtns = document.querySelectorAll('[data-search-trigger]');
+  const closeBtns = overlay.querySelectorAll('[data-search-close]');
+  const input = overlay.querySelector('[data-search-input]');
+
+  // Mismo tratamiento de foco que initDrawer y el modal de vista rápida:
+  // fuera del árbol de accesibilidad al cerrar, foco restaurado, Tab
+  // atrapado dentro mientras está abierto.
+  overlay.inert = true;
+  let lastFocused = null;
+
+  function openSearch() {
+    lastFocused = document.activeElement;
+    overlay.inert = false;
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => {
+      if (input) input.focus();
+    }, 100);
+  }
+
+  function closeSearch() {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+    overlay.inert = true;
+    document.body.style.overflow = '';
+    lastFocused?.focus();
+  }
+
+  triggerBtns.forEach(btn => btn.addEventListener('click', openSearch));
+  closeBtns.forEach(btn => btn.addEventListener('click', closeSearch));
+
+  // Cerrar al hacer clic en el backdrop
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeSearch();
+    }
+  });
+
+  // Cerrar con Escape, y ciclar Tab dentro del overlay mientras está abierto
+  document.addEventListener('keydown', (e) => {
+    if (overlay.classList.contains('hidden')) return;
+
+    if (e.key === 'Escape') {
+      closeSearch();
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const focusable = getFocusable(overlay);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+})();
+
+/* -------------------------------------------------------------------------
+ | Progressive Web App (PWA) — Service Worker Nativo
+ * ---------------------------------------------------------------------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then((registration) => {
+        console.log('[PWA] Service Worker activo con scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('[PWA] Error en registro /sw.js, probando fallback:', error);
+        navigator.serviceWorker.register('/wp-content/themes/racing-bike-theme/public/sw.js')
+          .catch(() => {});
+      });
+  });
+}
+

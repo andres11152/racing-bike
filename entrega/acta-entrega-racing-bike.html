@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Acta de Entrega — Racing Bike 1998</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 20mm 18mm;
+    @bottom-center {
+      content: "Racing Bike 1998 — Acta de Entrega  ·  Página " counter(page) " de " counter(pages);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 8.5px;
+      color: #9a9a9a;
+      letter-spacing: 0.03em;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 10.5px;
+    line-height: 1.55;
+  }
+
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: 600; margin: 0; }
+
+  .accent { color: #0d9668; }
+
+  /* ---------- PORTADA ---------- */
+  .cover {
+    height: 253mm;
+    background:
+      radial-gradient(ellipse 900px 500px at 88% -8%, rgba(13,150,104,0.35), transparent 60%),
+      radial-gradient(ellipse 700px 500px at -10% 108%, rgba(13,150,104,0.16), transparent 55%),
+      linear-gradient(165deg, #131313 0%, #0c0c0c 45%, #090909 100%);
+    color: #fff;
+    margin: -22mm -18mm 0 -18mm;
+    padding: 46mm 22mm 26mm 22mm;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0d9668 0%, #17d999 50%, #0d9668 100%);
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    top: -160px; right: -160px;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    border: 1px solid rgba(16,185,129,0.22);
+    box-shadow: 0 0 0 90px rgba(16,185,129,0.02) inset;
+  }
+  .cover-watermark {
+    position: absolute;
+    right: -30px; bottom: -55px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 260px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(16,185,129,0.13);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .cover-logo { width: 138px; position: relative; z-index: 1; }
+  .cover-logo img { width: 100%; display: block; }
+  .cover-mid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 9.5px;
+    color: #2fdb9e;
+    margin-bottom: 16px;
+    font-weight: 700;
+  }
+  .cover-eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1.5px;
+    background: #2fdb9e;
+    display: inline-block;
+  }
+  .cover-title {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    font-size: 36px;
+    line-height: 1.14;
+    max-width: 430px;
+    color: #ffffff;
+  }
+  .cover-sub {
+    margin-top: 18px;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #a3a3a3;
+    max-width: 400px;
+    font-family: Georgia, serif;
+    font-style: italic;
+  }
+  .cover-highlights {
+    display: flex;
+    gap: 34px;
+    margin-top: 34px;
+    padding-top: 26px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    max-width: 470px;
+  }
+  .hl-item {
+    font-size: 9.3px;
+    line-height: 1.5;
+    color: #9c9c9c;
+  }
+  .hl-num {
+    display: block;
+    font-family: Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2fdb9e;
+    margin-bottom: 6px;
+  }
+
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 200px));
+    gap: 20px 48px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 20px;
+    font-size: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-meta .label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #7d7d7d;
+    font-size: 8px;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .cover-meta .value { color: #f5f5f5; font-size: 12px; font-weight: 500; }
+
+  /* ---------- CONTENIDO ---------- */
+  .page-block { page-break-after: always; }
+  .page-block:last-child { page-break-after: auto; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border-bottom: 2px solid #0a0a0a;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+  .section-num {
+    font-family: Georgia, serif;
+    font-size: 11px;
+    color: #10b981;
+    font-weight: 700;
+  }
+  .section-head h2 { font-size: 17px; }
+
+  h3.sub { font-size: 12px; margin-top: 20px; margin-bottom: 8px; color: #0a0a0a; }
+  h3.sub .accent-bar { display:inline-block; width:3px; height:11px; background:#10b981; margin-right:7px; vertical-align:-1px; }
+
+  p { margin: 0 0 10px 0; }
+  ul { margin: 0 0 12px 0; padding-left: 18px; }
+  li { margin-bottom: 5px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 18px 0;
+    font-size: 9.7px;
+  }
+  th {
+    background: #0a0a0a;
+    color: #fff;
+    text-align: left;
+    padding: 7px 9px;
+    font-weight: 600;
+    font-size: 8.7px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td {
+    padding: 7px 9px;
+    border-bottom: 1px solid #e5e5e5;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  td.mono, .mono { font-family: 'Courier New', monospace; font-size: 9.3px; }
+
+  .callout {
+    background: #f2fbf7;
+    border-left: 3px solid #10b981;
+    padding: 10px 14px;
+    margin: 12px 0 16px 0;
+    font-size: 9.8px;
+  }
+  .callout strong { color: #0a0a0a; }
+
+  .callout.warn {
+    background: #fdf7f0;
+    border-left-color: #c98a2c;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #0a0a0a;
+    color: #fff;
+    font-size: 8px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.green { background: #0d9668; }
+  .badge.pending { background: #c98a2c; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .box {
+    border: 1px solid #e0e0e0;
+    padding: 12px 14px;
+    border-radius: 4px;
+  }
+  .box h4 { font-size: 10.5px; margin: 0 0 6px 0; font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+
+  .link { color: #0d9668; text-decoration: none; font-weight: 600; }
+
+  .footer-note {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 8.7px;
+    color: #8a8a8a;
+    font-style: italic;
+  }
+
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li { padding-left: 20px; position: relative; }
+  .checklist li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #0d9668;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<div class="cover">
+  <div class="cover-watermark">1998</div>
+  <div class="cover-logo">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iMTAyNC4wMDAwMDBwdCIgaGVpZ2h0PSIxMDI0LjAwMDAwMHB0IiB2aWV3Qm94PSIwIDAgMTAyNC4wMDAwMDAgMTAyNC4wMDAwMDAiCiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KCjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAuMDAwMDAwLDEwMjQuMDAwMDAwKSBzY2FsZSgwLjEwMDAwMCwtMC4xMDAwMDApIgpmaWxsPSIjZmZmZmZmIiBzdHJva2U9Im5vbmUiPgo8cGF0aCBkPSJNNDg1NCA5NTYyIGMtNjMgLTQ2IC0xNTMgLTE1MCAtMjIyIC0yNTYgLTc0IC0xMTUgLTE2MCAtMjA5IC0yMTYKIC0yMzggLTU1IC0yOCAtOTEgLTIxIC0yODYgNTcgLTk5IDM5IC0xNzkgNjUgLTIwMiA2NSAtNDMgMCAtNzggLTI3IC0zNTIgLTI3MwogLTE4MSAtMTYzIC0yNTYgLTIyNCAtMzIzIC0yNTkgLTM4IC0yMSAtNDUgLTIxIC03NSAtOSAtOTUgNDAgLTE3MiA2MiAtMTk3IDU2CiAtMTQgLTMgLTc0IC00MSAtMTMxIC04MyAtNTggLTQzIC0yMDIgLTEzNiAtMzIwIC0yMDcgLTI2MSAtMTU2IC0yODAgLTE2OAogLTI4MCAtMTc3IDAgLTE4IDUxIC00IDIyMyA1OCAyNTQgOTIgMzAxIDExNCA0MjIgMTg5IGwxMDYgNjcgNDkgLTEyIGMyOCAtNwogNTAgLTEzIDUwIC0xNSAwIC05IC02MiAtMTM2IC04NSAtMTcyIC0xNCAtMjQgLTIzIC00MyAtMTkgLTQzIDIxIDAgMTgzIDExMQogMjYzIDE4MCA1MiA0NSAxNTEgMTE4IDIyMCAxNjQgMTU0IDEwMSAyODUgMjA4IDM3NSAzMDkgOTYgMTA2IDEwNyA5MyA1NiAtNjUKIC0xNiAtNTEgLTI3IC05NCAtMjUgLTk2IDggLTkgNzQgNDAgMTI1IDkyIDc3IDgwIDg0IDgyIDE3NSA2MSA0OSAtMTIgNzUgLTIzCiA3MyAtMzEgLTIgLTcgLTc4IC05MiAtMTcwIC0xODggLTE0MiAtMTQ5IC0xODcgLTIwNiAtMTY0IC0yMDYgMiAwIDI4IDIxIDU4CiA0NiAyOSAyNSAxMDUgODAgMTY4IDEyMiAyODIgMTg1IDU3NSA0NTMgNzAwIDYzOSAzNiA1MyA3MCA5OCA3NiAxMDAgNiAyIDMwCiAtMjUgNTQgLTU5IDQ4IC02OSAyNTMgLTI4NCAzMTQgLTMyOSAzOCAtMjggODkgLTM4IDEwMSAtMjAgMyA1IC00IDQ0IC0xNiA4NwogbC0yMSA3NyAyMSAyMCBjMjUgMjUgMzkgMjEgMTg3IC00OSA3OSAtMzggMTA0IC01NyAyMDUgLTE1NiAxMjQgLTEyMiAxNzYKIC0xNjYgMjI3IC0xOTIgNjcgLTM0IDYyIC0zIC0yMyAxNDQgLTU2IDk2IC01NyAxMDkgLTEwIDExMCAxMSAwIDUzIDE2IDk0IDM1CiA0MCAxOSA3NCAzNSA3NiAzNSAxIDAgNSAtMzAgNyAtNjYgNCAtNTggOCAtNzAgMzIgLTkwIDIzIC0yMCAzOCAtMjQgOTkgLTI0CiBsNzMgMCA3NCAtNzYgYzQxIC00MiAxMDIgLTk1IDEzNSAtMTE5IDY4IC00OCAxNjIgLTk4IDE3NiAtOTMgNiAyIC0xMSAzMCAtMzcKIDYzIC01MSA2NiAtODQgMTI1IC04NCAxNTEgMCAzOSAxNjcgLTIyIDMzNyAtMTI0IDExNyAtNzAgMjgwIC0xNTIgMzAyIC0xNTIgNgogMCAxMSA2IDExIDE0IDAgMTUgLTY2IDEwNiAtMTI5IDE3NiAtMzcgNDEgLTM5IDQ2IC0yMyA1OSAyMyAxOCAxMzQgNzEgMTQ5IDcxCiA3IDAgNDYgLTMxIDg1IC02OSA4OCAtODMgMTEwIC05NSAyMTQgLTExNCA1OCAtMTEgMTA2IC0yOSAxNzcgLTY3IDEwNSAtNTYKIDIyNSAtMTAyIDI0MSAtOTMgMTQgOSAtMjUgMzcgLTEyMyA5MCAtODUgNDYgLTE4MSAxMTAgLTMzNSAyMjMgLTEwNyA3OCAtMjI1CiAxNDAgLTI2NyAxNDAgLTE5IDAgLTExMCAtMjUgLTIwMiAtNTQgLTEzMCAtNDIgLTE3NSAtNTIgLTE5NSAtNDYgLTU5IDE4IC0yNTcKIDEyMyAtMzEwIDE2NCAtMzIgMjMgLTExNSA4MSAtMTg3IDEyNyAtMTI2IDgyIC0xMzEgODQgLTE5MCA4NCAtNTAgMCAtNzUgLTcKIC0xNDggLTQzIC0xMTcgLTU1IC0xNzggLTU3IC0zMTcgLTggLTIzMSA4MSAtMjc3IDEwMCAtMzQ0IDE0MCAtMjAwIDEyMCAtMzQ5CiAxODYgLTQyMCAxODYgLTMxIDAgLTUzIC04IC04MiAtMjh6Ii8+CjxwYXRoIGQ9Ik00Nzk0IDg4ODMgYy01MSAtMTcgLTE4MCAtMTQ0IC0yMjcgLTIyMyAtNjIgLTEwNCAtMTM4IC0yNTAgLTEyOQogLTI1MCA1IDAgMTkgMTIgMzMgMjYgMTMgMTQgNjYgNTcgMTE2IDk1IDExOSA4OSAyMDcgMjAyIDI0OCAzMjAgOCAyMSAxMSA0MCA3CiA0MiAtNCAzIC0yNSAtMiAtNDggLTEweiIvPgo8cGF0aCBkPSJNNTYxMCA4ODQ3IGMwIC0yNyA4OCAtMTQ2IDE2NSAtMjIyIDY3IC02NiA5OSAtOTAgMTkzIC0xMzcgNzMgLTM4Ci4xMTIgLTUzIDExMiAtNDQgMCAyNSAtNDEgNjYgLTkxIDkyIC01MSAyNSAtNTggMzYgLTc4IDExMSAtMTQgNTIgLTUyIDg1IC0xODEKIDE1OSAtOTcgNTUgLTEyMCA2MyAtMTIwIDQxeiIvPgo8cGF0aCBkPSJNNTM0MSA4NjA2IGMtNiAtNyAtOSAtMjAgLTUgLTI5IDggLTIxIDIwNCAtMTkxIDIxMiAtMTgzIDEyIDEyIC0zMgogNzkgLTEwMSAxNTMgLTcwIDc1IC04NiA4MyAtMTA2IDU5eiIvPgo8cGF0aCBkPSJNNzQ4MCA4NTA2IGMwIC0zMyA3MSAtMTA1IDE3MyAtMTc0IDk3IC02NSAxMjcgLTc4IDEyNyAtNTMgMCAxMgogLTEwNiAxNDEgLTEzOCAxNjkgLTMyIDI4IC0xMjAgNzIgLTE0NCA3MiAtMTAgMCAtMTggLTYgLTE4IC0xNHoiLz4KPHBhdGggZD0iTTQ0NjQgNzk0MiBjLTc0IC0yNiAtMTI4IC03NCAtMTYxIC0xNDAgLTI4IC01NyAtMjggLTU4IC0zMSAtMjkwIC00CiAtMjc0IDMgLTMxMiA3NCAtMzkxIDU3IC02MyAxMjQgLTkyIDIyOSAtOTkgMTg4IC0xMSAzMjQgODMgMzQyIDIzNyA1IDQ3IDQgNTAKIC0xOSA1NiAtNDMgMTEgLTEzMCAxIC0xMzggLTE1IC00IC04IC0xNSAtMzIgLTI0IC01MyAtMjAgLTQ2IC02MiAtNjcgLTEzOAogLTY3IC02MyAwIC0xMDkgMjQgLTEzNSA3MiAtMTYgMjkgLTE4IDU5IC0xOCAyMzggMCAyMTggNCAyMzkgNTQgMjg0IDIzIDIxCiAxMDAgMzIgMTU1IDIyIDQ0IC04IDg0IC00OSA5MiAtOTQgNCAtMTggMTUgLTM3IDI1IC00MiAyNSAtMTQgMTIzIC0xMiAxMzcgMgogMzEgMzEgLTcgMTUzIC02NSAyMTMgLTU3IDU5IC0xMTEgNzggLTIyOCA4MiAtNzggMyAtMTExIC0xIC0xNTEgLTE1eiIvPgo8cGF0aCBkPSJNNzc3NyA3OTQ5IGMtOTAgLTIxIC0xNjAgLTc4IC0xOTkgLTE2NCAtMjIgLTQ4IC0yMyAtNjAgLTIzIC0yOTUgbDAKIC0yNDUgMzMgLTY3IGM1MCAtMTAzIDEyMSAtMTQ3IDI1MiAtMTU1IDE3OCAtMTIgMjk2IDYzIDMzNSAyMTQgMTkgNzEgMjEgMjczCiAzIDI5MSAtMTkgMTkgLTI4MiAxNyAtMjk4IC0zIC0xMiAtMTUgLTE2IC05NyAtNSAtMTE1IDMgLTUgMzMgLTEwIDY1IC0xMCA4OAogMCA5MSAtMiA4NCAtNjkgLTQgLTMxIC0xMyAtNjkgLTIxIC04NCAtMjAgLTQwIC03MCAtNjcgLTEyNCAtNjcgLTY4IDAgLTEwNQogMTcgLTEzMSA1OCAtMjIgMzYgLTIzIDQ2IC0yMyAyNTIgMCAxODcgMiAyMTkgMTggMjQ3IDIyIDQyIDY0IDYzIDEyMiA2MyA3MiAwCiAxMTUgLTI1IDEzOSAtODIgMTcgLTQxIDI1IC00OSA1NCAtNTQgMTggLTQgNTIgLTMgNzUgMiA1MSAxMSA1NiAyOSAzMiAxMDkKIC0xNyA2MCAtNjEgMTE3IC0xMDkgMTQyIC03NiAzOSAtMTkyIDUzIC0yNzkgMzJ6Ii8+CjxwYXRoIGQ9Ik0xOTAzIDc5NDAgbC0yMyAtOSAwIC00NDAgYzAgLTUwMSAtOCAtNDYxIDg5IC00NjEgODUgMCA4MSAtOSA4MQogMTc2IGwwIDE2NCA3MyAwIDcyIDAgNTIgLTExOCBjMjkgLTY0IDYxIC0xMzggNzIgLTE2MyAxMyAtMzEgMjcgLTQ4IDQzIC01MgogNDIgLTEyIDEyNCAtNyAxNDQgNyAxOCAxNCAxOCAxNyAtMjAgOTMgLTIxIDQzIC01OCAxMTkgLTgyIDE3MCBsLTQyIDkxIDQ0IDI4CiBjODMgNTMgMTIwIDE0MSAxMTIgMjY3IC04IDEyMSAtNjcgMjAwIC0xNzMgMjMzIC02MCAxOSAtNDA3IDMwIC00NDIgMTR6IG0zODEKIC0xNjMgYzQxIC0yNyA1OSAtNzIgNTQgLTEzNSAtNCAtNDYgLTEwIC02MCAtMzYgLTgzIC0zNCAtMzAgLTk3IC00MyAtMTkyIC0zNwogbC01NSAzIC0zIDEzOSAtMyAxMzkgMTA1IC01IGM3NSAtMyAxMTIgLTkgMTMwIC0yMXoiLz4KPHBhdGggZD0iTTMzMjIgNzk0MyBjLTEzIC0zIC0yNyAtMTUgLTMzIC0zMSAtMzIgLTg0IC0yNDkgLTg0NiAtMjQ1IC04NTggNAogLTEyIDIzIC0xNCA4MyAtMTIgbDc4IDMgMjUgOTAgMjYgOTAgMTQ2IDMgMTQ1IDMgMTcgLTY4IGMzMSAtMTI3IDI3IC0xMjMgMTE2CiAtMTIzIDU3IDAgNzkgNCA4MyAxNCAzIDggLTI3IDEyMSAtNjcgMjUyIC00MSAxMzIgLTk3IDMyMiAtMTI2IDQyNCAtMjkgMTAyCiAtNTkgMTkxIC02NiAxOTkgLTEzIDE0IC0xMzIgMjMgLTE4MiAxNHogbTk4IC0yNDUgYzYgLTI0IDE3IC02MyAyNSAtODggOCAtMjUKIDI1IC04NyAzOSAtMTM3IGwyNSAtOTMgLTEwNSAwIGMtNTcgMCAtMTA0IDMgLTEwNCA2IDAgMjIgOTUgMzU0IDEwMiAzNTQgNCAwCiAxMiAtMTkgMTggLTQyeiIvPgo8cGF0aCBkPSJNNjM2NiA3OTM0IGMtMTQgLTE0IC0xNiAtNjcgLTE2IC00NDIgMCAtMjM1IDQgLTQzMyA5IC00NDAgOSAtMTUKIDEwNCAtMjIgMTM4IC0xMCAyMyA3IDIzIDggMjUgMjkwIGwzIDI4MyA1MSAtOTAgYzI4IC00OSA5OSAtMTc4IDE1OCAtMjg2IDExNQogLTIxMiAxMTEgLTIwOSAxOTkgLTIwOSA5NCAwIDg3IC00MCA4NyA0NjYgbDAgNDQ1IC03NyAtMyAtNzggLTMgLTMgLTI4MiBjLTEKIC0xNTYgLTYgLTI4MyAtMTAgLTI4MyAtNyAwIC00MyA2NCAtMTYwIDI4NSAtMTQ3IDI3NiAtMTUxIDI4MiAtMTkwIDI4OSAtNjUKIDEwIC0xMjAgNyAtMTM2IC0xMHoiLz4KPHBhdGggZD0iTTU1NjcgNzkzNCBjLTQgLTQgLTcgLTIwNCAtNyAtNDQ1IDAgLTQyMyAxIC00MzkgMTkgLTQ0OSAyOSAtMTUgMTI2CiAtMTMgMTQwIDQgOCA5IDEwIDEzNiA5IDQ1MiBsLTMgNDM5IC03NSAzIGMtNDIgMSAtNzkgMCAtODMgLTR6Ii8+CjxwYXRoIGQ9Ik0zMDA0IDY2MzUgYy0zMCAtMjAgLTM3IC01OCAtMjAgLTEwMCAxMyAtMzAgMTE1IC0yMDcgMjQyIC00MTcgMTkKIC0zMSAzNCAtNjIgMzQgLTY5IDAgLTEzIC0xOTQgLTM2OCAtMjQ1IC00NDkgLTIwIC0zMSAtMzAgLTQwIC00MyAtMzQgLTQzIDE4CiAtMTgwIDU1IC0yNTkgNjkgLTM0NyA2MSAtNzA0IC0zIC05OTYgLTE3OSAtMTMyIC03OSAtMjExIC0xNDIgLTMxMiAtMjQ4IC0xOTIKIC0yMDAgLTMxOSAtNDUyIC0zNzEgLTczMyAtMjUgLTEzMyAtMjYgLTQwMiAtMiAtNTMwIDU3IC0zMDUgMTg3IC01NTYgMzkzCiAtNzYwIDIxOCAtMjE2IDQ2MiAtMzQ0IDc2MCAtNDAxIDEyNyAtMjUgMzg3IC0yNCA1MTUgMCA1MjAgMTAwIDkzNyA0NjUgMTEwNAogOTY2IDE5IDU4IDQyIDE0NiA1MSAxOTUgOSA1MCAxOSAxMDAgMjEgMTEzIGw0IDIyIDI5MSAwIGMyNDcgMCAyOTYgMiAzMjUgMTYKIDIyIDExIDcyIDYzIDE0MiAxNTEgMTEyIDE0MSA1NjkgNzA0IDY3NiA4MzMgNjYgNzkgMjk3IDM2NCA0NTQgNTU5IDUyIDY0IDk4CiAxMTggMTAzIDExOSA1IDIgOSAtNDYgOSAtMTExIGwwIC0xMTUgLTUyIC0zMCBjLTYyIC0zNCAtMTM3IC0xMTIgLTE2NyAtMTcwCiAtNTAgLTk3IC01MSAtMTE3IC01MSAtNzM0IDAgLTU2NSAwIC01NzggMjAgLTU5OCAxNiAtMTYgMzMgLTIwIDc5IC0yMCAxMDQgMAogOTcgLTQwIDEwMCA1ODEgMiA1NzUgMSA1NjMgNTcgNjM2IDE0IDE4IDI5IDMzIDMzIDMzIDQgMCAxMSAtNjYyIDE1IC0xNDcyIDgKIC0xNjAyIDUgLTE1MjEgNjUgLTE1NTIgMzggLTIwIDY0IC0yMCAxMDEgLTEgNjUgMzQgNjAgLTkyIDYwIDE1NjIgMCA4MjcgNAogMTUwMyA4IDE1MDMgMTcgMCA4MiAtNzcgMTAxIC0xMjAgMjAgLTQzIDIxIC02NCAyMSAtNTczIDAgLTU0MiAxIC01NTUgMzkKIC01ODQgMjUgLTE5IDExNSAtMTYgMTQwIDUgMjIgMTcgMjIgMTkgMjcgNTc5IDcgNjE5IDcgNjE1IC01MyA3NDIgLTU5IDEyNAogLTExNyAxNzMgLTI3MCAyMjYgLTEwIDMgLTEzIDk3IC0xMyA0MjUgbDAgNDIwIDM2MyAwIGMyMDkgMCAzNzcgNCAzOTggMTAgNDgKIDEzIDc5IDUwIDg2IDk5IDcgNTMgLTExIDk2IC01MiAxMjEgLTMyIDIwIC00OCAyMCAtOTU0IDIwIC0xMDE4IDAgLTk2MyA0CiAtOTk1IC02NCAtMjAgLTQyIC0yMCAtNjcgLTIgLTExMSAyNyAtNjQgMzEgLTY0IDQ4MSAtNzIgbDQwNSAtNiAwIC0xMjkgMAogLTEyOCAtMTE3OSAwIC0xMTc5IDAgLTQ1IDc4IGMtMjQgNDIgLTU2IDEwMCAtNzAgMTI4IGwtMjYgNTEgMTY3IDYgYzE1OCA1CiA0MzIgMzYgNTE0IDU4IDY3IDE4IDkxIDExMSA0NCAxNjYgbC0yNCAyOCAtNTI0IDMgYy00NTIgMiAtNTI2IDAgLTU0NCAtMTN6CiBtMjY0NiAtNzQyIGMwIC05IC0yNTkgLTMzOCAtNDM4IC01NTggLTE2NSAtMjAyIC02MTkgLTc2OCAtNzEyIC04ODggLTQxIC01MwogLTc5IC05NSAtODQgLTk0IC05IDMgLTI4IDM4IC0yNTEgNDY3IC0zODUgNzQwIC01NTUgMTA3MCAtNTU1IDEwNzYgMCAyIDQ1OSA0CiAxMDIwIDQgNTYxIDAgMTAyMCAtMyAxMDIwIC03eiBtLTIxMzAgLTM0OCBjMTg3IC0zNTEgMjc4IC01MjMgMzgwIC03MjAgNTEKIC05OSAxMTkgLTIyNyAxNTAgLTI4NSAzMiAtNTggNzIgLTEzMyA4OSAtMTY3IGwzMSAtNjMgLTE0OCAwIC0xNDkgMCAtNyA2NgogYy0xNyAxNjYgLTczIDM1OCAtMTQ2IDUwNSAtOTkgMTk2IC0yNjcgMzkyIC00MzcgNTEyIC03NyA1NCAtODIgNjAgLTcxIDgwIDI0CiA0NiAxNjEgMjgzIDE3MSAyOTUgNSA3IDExIDExIDEyIDEwIDEgLTIgNTggLTEwNiAxMjUgLTIzM3ogbS04MDUgLTIwOSBjNjEKIC0xNSAxMTYgLTMxIDEyNCAtMzUgMTEgLTcgLTE5IC02NyAtMTQwIC0yNzcgLTQzMSAtNzU2IC00MzEgLTc1NiAtNDM2IC04MTAKIC00IC0zOCAtMSAtNTggMTIgLTc4IDM4IC01NyAyMCAtNTYgNjg5IC01NiAzMzggMCA2MTcgLTQgNjIwIC04IDcgLTEyIC0yOQogLTE4OCAtNTIgLTI1MiAtNzggLTIxOSAtMjE1IC00MDcgLTM5NyAtNTQzIC0xMDMgLTc3IC0yNzYgLTE2MSAtNDAxIC0xOTMKIC0xMzMgLTM1IC0zNTggLTQ0IC00ODYgLTIwIC0zNzQgNzAgLTY5NiAzMTkgLTg1MyA2NTggLTEzNCAyOTEgLTEzMSA2ODkgOAogOTgyIDYwIDEyNyAxMTUgMjA0IDIyMSAzMTQgMTY2IDE3MSAzOTAgMjkzIDYxMSAzMzEgMzMgNiA3MSAxMyA4NSAxNSAxNCAzIDg0CiAzIDE1NSAyIDk4IC0zIDE1NyAtMTAgMjQwIC0zMHogbTQxNiAtMTkzIGMxODUgLTEzOSAzMzggLTM1NCA0MDkgLTU3MyAyMiAtNjkKIDU2IC0yNDggNDggLTI1NiAtMyAtMiAtMjM1IC0zIC01MTUgLTIgbC01MTEgMyAzNyA2NSBjMjEgMzYgODIgMTQ0IDEzNiAyNDAKIDU0IDk2IDEzNSAyNDAgMTgwIDMyMCA0NSA4MCA5NSAxNjkgMTExIDE5NyAxNiAyOSAzMiA1MyAzNiA1MyAzIDAgMzQgLTIxIDY5CiAtNDd6Ii8+CjxwYXRoIGQ9Ik00MTc4IDM4NzggYy0xNSAtNSAtMzEgLTE5IC0zNSAtMzEgLTggLTIzIC01IC0xNTkwIDMgLTE2MTkgMTAgLTM0CiA1NiAtMzcgNDIyIC0zMiAzOTEgNSA0NTEgMTIgNTYwIDY0IDE2MyA3NyAyNTYgMjU5IDIzOCA0NjkgLTEyIDEzOSAtOTcgMjcxCiAtMjA4IDMyMSBsLTQxIDE4IDM5IDI1IGM1NiAzNSAxMTIgMTAxIDE0MiAxNjYgMjIgNDYgMjcgNzQgMzAgMTYyIDEwIDI1OAogLTEwNiA0MDUgLTM1MSA0NDQgLTEwMiAxNyAtNzU5IDI3IC03OTkgMTN6IG03MDQgLTI3OSBjNzkgLTIwIDExOCAtODggMTE4CiAtMjA0IC0xIC04NSAtMjYgLTEzNiAtODcgLTE3MiBsLTQ4IC0yOCAtMjEwIDAgLTIxMCAwIC0zIDIwNyAtMiAyMDcgMTM3IDQKIGMxNTkgMyAyNTMgLTEgMzA1IC0xNHogbTMzIC02OTIgYzc4IC0zNSAxMTIgLTgzIDEyMSAtMTc2IDEzIC0xMjMgLTQxIC0yMjYKIC0xMzEgLTI0OSAtMjIgLTYgLTEzMyAtMTIgLTI0OCAtMTQgbC0yMDcgLTMgMCAyMzMgMCAyMzQgMjEzIC00IGMxNzQgLTMgMjE5CiAtNyAyNTIgLTIxeiIvPgo8cGF0aCBkPSJNODA4OCAzODgzIGMtNzIgLTggLTY4IDQ0IC02OCAtODQ5IDAgLTc2MyAxIC04MDIgMTggLTgxNyAxNyAtMTUgNjYKIC0xNyA0OTkgLTE3IDQ0MyAwIDQ4MiAxIDUwMiAxOCAxOSAxNSAyMSAyOCAyMiAxMjEgMiAxNTIgMzIgMTQxIC0zNzcgMTQxCiBsLTMzNCAwIDAgMjE1IDAgMjE1IDI4MCAwIGMzNDIgMCAzMjAgLTEwIDMyMCAxNDAgMCAxNDYgMjMgMTM2IC0zMTggMTQ1CiBsLTI4MCA3IC01IDE1MiBjLTMgODMgLTQgMTcxIC0zIDE5NiBsMiA0NSAzMzcgNSBjMzAyIDQgMzM4IDcgMzU0IDIyIDIwIDIwCiAyOSAxMjAgMTkgMTkzIC0xMiA3NyAtMSA3NSAtNDk4IDczIC0yMzggLTEgLTQ1MCAtMyAtNDcwIC01eiIvPgo8cGF0aCBkPSJNNjQ3NCAzODU5IGMtMTggLTIwIC0xOSAtNTAgLTIyIC04MjMgbC0yIC04MDMgMjEgLTE5IGMxOCAtMTYgMzcKIC0xOSAxMzQgLTE5IDE2NSAwIDE1NSAtMTkgMTU1IDI3OSBsMCAyNDEgNzIgODAgYzM5IDQ0IDc2IDgxIDgyIDgyIDYgMiA2MQogLTczIDEyMyAtMTY1IDI5MyAtNDM3IDMzNiAtNDk2IDM3MyAtNTA5IDE5IC03IDkwIC0xMiAxNTggLTEyIDEwOSAtMSAxMjQgMQogMTQyIDE5IDExIDExIDIwIDI5IDIwIDQxIDAgMTIgLTQ2IDg3IC0xMDIgMTY4IC0xMTcgMTY4IC0yNjAgMzc2IC0zOTYgNTc1CiAtOTAgMTMxIC05NSAxNDAgLTgxIDE2MiA4IDEzIDEwNyAxNDIgMjIwIDI4NiAyMzkgMzA3IDI4OSAzNzUgMjg5IDM5OCAwIDM3CiAtMjQgNDMgLTE2OCAzOCAtNzYgLTIgLTE0MyAtNyAtMTQ5IC0xMSAtNyAtNCAtMTI2IC0xNTUgLTI2NiAtMzM1IC0xNDAgLTE4MAogLTI2OSAtMzQzIC0yODYgLTM2MiBsLTMwIC0zNSAtMSAzNTMgYzAgNDI4IDE0IDM5MiAtMTUzIDM5MiAtMTAzIDAgLTExNiAtMgogLTEzMyAtMjF6Ii8+CjwvZz4KPC9zdmc+Cg==" alt="Racing Bike 1998">
+  </div>
+  <div class="cover-mid">
+    <div class="cover-eyebrow">Acta de Entrega de Proyecto</div>
+    <h1 class="cover-title">Plataforma E-commerce<br>Racing Bike 1998</h1>
+    <p class="cover-sub">Desarrollo, integración y puesta en producción de la tienda en línea sobre WordPress + WooCommerce, incluyendo theme a medida, suite de plugins propios y configuración operativa completa.</p>
+    <div class="cover-highlights">
+      <div class="hl-item"><span class="hl-num">01</span>Theme a medida<br>Sage 11 + WooCommerce</div>
+      <div class="hl-item"><span class="hl-num">11</span>Plugins propios<br>desarrollados a medida</div>
+      <div class="hl-item"><span class="hl-num">03</span>Áreas entregadas<br>SEO · Datos · Accesos</div>
+    </div>
+  </div>
+  <div class="cover-meta">
+    <div>
+      <div class="label">Cliente</div>
+      <div class="value">Racing Bike 1998</div>
+    </div>
+    <div>
+      <div class="label">Proveedor</div>
+      <div class="value">Skycode Agency</div>
+    </div>
+    <div>
+      <div class="label">Fecha de entrega</div>
+      <div class="value">3 de septiembre de 2026</div>
+    </div>
+    <div>
+      <div class="label">Versión del acta</div>
+      <div class="value">1.0</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1. OBJETO Y ALCANCE ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <h2>Objeto y alcance de la entrega</h2>
+  </div>
+
+  <p>El presente documento certifica la entrega formal de la plataforma de comercio electrónico <strong>Racing Bike 1998</strong>, desarrollada sobre WordPress y WooCommerce, junto con la totalidad de los desarrollos a medida, integraciones, accesos y configuraciones descritos a continuación.</p>
+
+  <h3 class="sub"><span class="accent-bar"></span>Incluye esta entrega</h3>
+  <ul class="checklist">
+    <li>Theme a medida construido sobre Sage 11 (Blade + Acorn) con Tailwind CSS v4, totalmente integrado con WooCommerce.</li>
+    <li>Suite de 11 plugins propios desarrollados específicamente para el proyecto.</li>
+    <li>Configuración de SEO técnico (Rank Math) con ajustes automatizados.</li>
+    <li>Scripts de migración, siembra de catálogo y respaldo completo del sitio.</li>
+    <li>Accesos administrativos al panel de WordPress y al correo corporativo.</li>
+    <li>Configuración operativa de moneda, checkout, envío transaccional y modo mantenimiento.</li>
+  </ul>
+
+  <h3 class="sub"><span class="accent-bar"></span>Pendientes / fuera de alcance de esta entrega</h3>
+  <div class="callout warn">
+    <strong>Integraciones declaradas como pendientes</strong> — no forman parte del alcance cerrado en esta acta y quedan sujetas a acuerdo posterior entre las partes:
+    <ul style="margin-top:8px; margin-bottom:0;">
+      <li>Integración de pasarelas de financiamiento <strong>Addi</strong> y <strong>Sistecrédito</strong>.</li>
+      <li>Feed social <strong>Instagram Wall</strong> en la página de Inicio.</li>
+      <li>Provisión final de logos de marcas aliadas en formato SVG optimizado.</li>
+    </ul>
+  </div>
+
+  <p class="footer-note">La aceptación de esta acta no cubre los ítems listados como pendientes, los cuales se documentarán en un anexo o acta complementaria una vez ejecutados.</p>
+</div>
+
+<!-- ============ 2. ACCESOS ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <h2>Accesos y credenciales</h2>
+  </div>
+
+  <p>Por seguridad, las contraseñas <strong>no se incluyen en este documento</strong>. Las credenciales de acceso fueron remitidas por separado a través de correo electrónico al contacto designado por el cliente.</p>
+
+  <h3 class="sub"><span class="accent-bar"></span>Panel de administración WordPress</h3>
+  <table>
+    <tr><th style="width:30%">Recurso</th><th>Detalle</th></tr>
+    <tr><td>URL de acceso</td><td class="mono"><a class="link" href="https://racingbike.com.co/wp-admin">https://racingbike.com.co/wp-admin</a></td></tr>
+    <tr><td>Usuario / contraseña</td><td>Enviados por correo electrónico al administrador del proyecto</td></tr>
+    <tr><td>Rol asignado</td><td>Administrador (acceso total)</td></tr>
+  </table>
+
+  <h3 class="sub"><span class="accent-bar"></span>Correo corporativo — panel Hostinger</h3>
+  <table>
+    <tr><th style="width:26%">Recurso</th><th>Detalle</th></tr>
+    <tr><td>URL de acceso (webmail)</td><td class="mono"><a class="link" href="https://mail.hostinger.com/">https://mail.hostinger.com/</a></td></tr>
+    <tr><td>Contraseñas</td><td>Enviadas por correo electrónico al administrador del proyecto</td></tr>
+  </table>
+
+  <p style="margin-top:14px;">Cuentas de correo configuradas bajo el dominio <strong>racingbike.com.co</strong>:</p>
+  <table>
+    <tr>
+      <th style="width:19%">Cuenta</th>
+      <th style="width:29%">Uso principal</th>
+      <th style="width:18%">Tipo / gestión</th>
+      <th>Propósito / configuración</th>
+    </tr>
+    <tr>
+      <td class="mono">ventas@racingbike.com.co</td>
+      <td>Correos transaccionales (pedidos, facturas, envíos, stock)</td>
+      <td><span class="badge green">Automático</span><br>WooCommerce</td>
+      <td>Remitente configurado en el plugin SMTP; uso exclusivo del sistema.</td>
+    </tr>
+    <tr>
+      <td class="mono">contacto@racingbike.com.co</td>
+      <td>Dudas preventa, cotizaciones, formulario web</td>
+      <td><span class="badge">Humano</span><br>Ventas</td>
+      <td>Correo público visible en footer / cabecera del sitio.</td>
+    </tr>
+    <tr>
+      <td class="mono">garantias@racingbike.com.co</td>
+      <td>Garantías, reclamaciones, devoluciones, soporte</td>
+      <td><span class="badge">Humano</span><br>Servicio al cliente</td>
+      <td>Centralización de incidencias posventa.</td>
+    </tr>
+    <tr>
+      <td class="mono">pagos@racingbike.com.co</td>
+      <td>Confirmación de transacciones, desembolsos y facturación</td>
+      <td><span class="badge">Humano</span><br>Finanzas</td>
+      <td>Coordinación contable con pasarelas de pago.</td>
+    </tr>
+  </table>
+
+  <div class="callout">
+    <strong>Recomendación de seguridad:</strong> se sugiere rotar todas las contraseñas entregadas dentro de los primeros 7 días posteriores a la recepción de esta acta, y habilitar verificación en dos pasos donde el proveedor lo permita.
+  </div>
+</div>
+
+<!-- ============ 3. ENTREGABLE — THEME ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <h2>Entregable — Theme a medida</h2>
+  </div>
+
+  <p><strong>Racing Bike Theme</strong> — construido sobre <strong>Sage 11</strong> (Blade templating + Acorn framework), con <strong>Tailwind CSS v4</strong> y ensamblado de assets vía Vite. Integración completa con WooCommerce mediante plantillas propias publicadas.</p>
+
+  <div class="grid-2">
+    <div class="box">
+      <h4>Componentes de interfaz (32)</h4>
+      <p style="margin:0; font-size:9.5px;">Carrusel hero, mega-menú, drawer de carrito, quick-view de producto, calculadora de talla, calculadora de financiación, galería de producto, feed de Instagram, badges de confianza, botón de WhatsApp, buscador overlay, banner de anuncios, guía de tallas, filtros de catálogo, entre otros.</p>
+    </div>
+    <div class="box">
+      <h4>Plantillas de página (7)</h4>
+      <p style="margin:0; font-size:9.5px;">Inicio (front-page), Nosotros, Contacto, Preguntas frecuentes, Legal, Bike Builder, Encuentra tu talla — más plantillas base (index, page, search, 404, single).</p>
+    </div>
+  </div>
+
+  <h3 class="sub"><span class="accent-bar"></span>Plantillas WooCommerce publicadas y personalizadas</h3>
+  <ul>
+    <li>Catálogo (archive-product) con vista de grilla/lista intercambiable.</li>
+    <li>Ficha de producto (single-product) con galería, reseñas y calculadora de talla integradas.</li>
+    <li>Carrito y Checkout — vía shortcodes <span class="mono">[woocommerce_cart]</span> / <span class="mono">[woocommerce_checkout]</span> para heredar el diseño del theme.</li>
+    <li>Página de agradecimiento (thank-you) post-compra.</li>
+    <li>Mi cuenta — dashboard, login y panel de cliente personalizados.</li>
+  </ul>
+
+  <h3 class="sub"><span class="accent-bar"></span>Lógica de negocio y configuración (backend del theme)</h3>
+  <ul>
+    <li><strong>View Composers:</strong> App, Home, Navigation, Post, Comments — inyección de datos a las vistas Blade.</li>
+    <li><strong>SEO técnico</strong> (<span class="mono">seo.php</span>), <strong>PWA</strong> (<span class="mono">pwa.php</span>), formulario de contacto, gestión de marcas de producto y filtros de catálogo.</li>
+  </ul>
+
+  <h3 class="sub"><span class="accent-bar"></span>Configuración técnica de base</h3>
+  <table>
+    <tr><th style="width:34%">Parámetro</th><th>Valor</th></tr>
+    <tr><td>Framework</td><td>Sage 11 (Acorn 6 + Symfony 8)</td></tr>
+    <tr><td>Versión mínima de PHP</td><td class="mono">8.4.1</td></tr>
+    <tr><td>Moneda</td><td>COP — separador de miles "." — 0 decimales</td></tr>
+    <tr><td>Modo "coming soon"</td><td>Desactivado (requisito para visibilidad pública)</td></tr>
+  </table>
+</div>
+
+<!-- ============ 4. ENTREGABLE — PLUGINS ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">04</span>
+    <h2>Entregable — Suite de plugins propios</h2>
+  </div>
+
+  <p>Se entregan <strong>11 plugins desarrollados a medida</strong> para el proyecto, empaquetados y listos para instalación en producción.</p>
+
+  <table>
+    <tr>
+      <th style="width:24%">Plugin</th>
+      <th style="width:9%">Versión</th>
+      <th>Función</th>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Analytics & Pixels</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Integración de alto rendimiento de Google Analytics 4 (GA4), Meta Pixel y Consent Mode v2.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Anti-Spam Shield</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Defensa anti-spam autónoma para comentarios y reseñas WooCommerce, sin APIs externas ni captchas.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Bike Builder</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Módulo interactivo de personalización de bicicletas en tiempo real, integrado con WooCommerce.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Cart Recovery</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Recuperación de carritos abandonados por email, con captura de contacto y secuencia de recordatorios automatizada.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike CRO Booster</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Barra dinámica de envío gratis, alertas de escasez de stock y generación de leads por WhatsApp.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Migration Helper</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Eleva el límite de importación de All-in-One WP Migration a 2GB.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Reviews</strong></td>
+      <td class="mono">1.3.0</td>
+      <td>Reseñas de clientes con foto y datos de ajuste (estatura, talla, disciplina) sobre el sistema nativo de WooCommerce.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike SEO Config</strong></td>
+      <td class="mono">1.0.1</td>
+      <td>Configuración automática de Rank Math SEO con ajustes optimizados para el proyecto.</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike Size Calculator</strong></td>
+      <td class="mono">1.0.2</td>
+      <td>Calculadora premium tipo modal para encontrar la talla ideal (Ruta, MTB, Gravel).</td>
+    </tr>
+    <tr>
+      <td><strong>Racing Bike SMTP Mailer</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Envío ligero y seguro de correos transaccionales vía SMTP, con soporte de variables de entorno.</td>
+    </tr>
+    <tr>
+      <td><strong>Skycode Maintenance Mode</strong></td>
+      <td class="mono">1.0.0</td>
+      <td>Modo mantenimiento enterprise: bloqueo real del front, control de acceso por rol/IP/token, captura de suscriptores y programación por fecha.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ============ 5. SEO + DATOS/MIGRACIÓN ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">05</span>
+    <h2>SEO, datos y migración</h2>
+  </div>
+
+  <h3 class="sub"><span class="accent-bar"></span>SEO técnico</h3>
+  <p>Se instaló y configuró <strong>Rank Math SEO</strong> como motor principal de posicionamiento, complementado con el plugin propio <span class="mono">Racing Bike SEO Config</span>, que aplica automáticamente los ajustes optimizados del proyecto (metadatos, sitemaps y schema estructurado) tras la activación inicial.</p>
+
+  <h3 class="sub"><span class="accent-bar"></span>Scripts de datos y siembra de contenido</h3>
+  <table>
+    <tr><th style="width:36%">Script</th><th>Función</th></tr>
+    <tr><td class="mono">seed-catalog.php</td><td>Carga inicial del catálogo de productos.</td></tr>
+    <tr><td class="mono">seed-menu.php</td><td>Configuración del menú de navegación.</td></tr>
+    <tr><td class="mono">seed-home.php</td><td>Poblado de secciones de la página de inicio.</td></tr>
+    <tr><td class="mono">seed-shipping.php</td><td>Configuración de zonas y métodos de envío.</td></tr>
+    <tr><td class="mono">seed-mock-reviews.php / import-reviews.php</td><td>Carga e importación de reseñas de clientes.</td></tr>
+    <tr><td class="mono">create-brands-attribute.php</td><td>Creación del atributo de marca para productos.</td></tr>
+    <tr><td class="mono">fix-product-images.php / fix-sizes-to-letters.php</td><td>Scripts de corrección de datos: imágenes de producto y normalización de tallas.</td></tr>
+  </table>
+
+  <h3 class="sub"><span class="accent-bar"></span>Respaldo del sitio</h3>
+  <p>Se entrega un respaldo completo del sitio en formato <span class="mono">.wpress</span> (All-in-One WP Migration), junto con el <strong>Migration Helper</strong> que eleva el límite de importación a 2GB para permitir su restauración sin restricciones adicionales.</p>
+</div>
+
+<!-- ============ 6. PAQUETES ENTREGADOS ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">06</span>
+    <h2>Paquetes de instalación entregados</h2>
+  </div>
+
+  <p>Los siguientes archivos comprimidos (<span class="mono">.zip</span>) constituyen los entregables listos para instalación directa en el panel de WordPress:</p>
+
+  <table>
+    <tr><th style="width:50%">Paquete</th><th style="width:20%">Peso</th><th>Contenido</th></tr>
+    <tr><td class="mono">racing-bike-theme.zip</td><td>41 MB</td><td>Theme completo compilado</td></tr>
+    <tr><td class="mono">seo-by-rank-math.zip</td><td>12 MB</td><td>Plugin Rank Math SEO</td></tr>
+    <tr><td class="mono">racing-bike-cart-recovery.zip</td><td>80 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">skycode-maintenance.zip</td><td>40 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-reviews.zip</td><td>28 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-analytics.zip</td><td>8 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-anti-spam.zip</td><td>8 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-seo-config.zip</td><td>8 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-size-calculator.zip</td><td>8 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-smtp.zip</td><td>8 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-bike-builder.zip</td><td>4 KB</td><td>Plugin propio</td></tr>
+    <tr><td class="mono">racing-bike-cro-booster.zip</td><td>4 KB</td><td>Plugin propio</td></tr>
+  </table>
+
+  <div class="callout">
+    Todos los paquetes fueron generados desde el ambiente de producción del proyecto y se encuentran listos para su despliegue mediante el instalador nativo de plugins/temas de WordPress.
+  </div>
+</div>
+
+<!-- ============ 7. RECOMENDACIONES ============ -->
+<div class="page-block">
+  <div class="section-head">
+    <span class="section-num">07</span>
+    <h2>Recomendaciones posteriores a la entrega</h2>
+  </div>
+
+  <ul class="checklist">
+    <li>Rotar las contraseñas del panel de WordPress y de las cuentas de correo dentro de los primeros 7 días.</li>
+    <li>Configurar copias de seguridad automáticas y periódicas del sitio y la base de datos.</li>
+    <li>Mantener actualizados WordPress, WooCommerce, Rank Math y los plugins de terceros; los plugins propios de Racing Bike no requieren actualizaciones externas salvo evolución del alcance.</li>
+    <li>Definir el proceso de integración de las pasarelas de financiamiento (Addi, Sistecrédito) y del feed de Instagram como una segunda fase del proyecto.</li>
+    <li>Monitorear el envío de correo transaccional (plugin SMTP) durante las primeras semanas de operación real.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Estado de la entrega:</strong> completa y funcional en los términos descritos en la sección 1 (Objeto y alcance). Los ítems pendientes quedan identificados explícitamente y no invalidan la presente acta.
+  </div>
+
+  <p class="footer-note">Documento generado el 3 de septiembre de 2026 · Racing Bike 1998 × Skycode Agency</p>
+</div>
+
+</body>
+</html>
