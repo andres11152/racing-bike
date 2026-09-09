@@ -19,6 +19,8 @@
             <img
               src="{{ get_theme_file_uri('public/images/logo-blanco.svg') }}"
               alt="{!! $siteName !!}"
+              loading="lazy"
+              decoding="async"
               class="h-32 md:h-44 w-auto object-contain"
             >
           </div>

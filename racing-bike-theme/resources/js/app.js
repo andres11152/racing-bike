@@ -828,25 +828,14 @@ document.querySelectorAll('[data-quantity-input]').forEach((wrapper) => {
 
 /* -------------------------------------------------------------------------
  | Cabecera transparente en Scroll (Sticky Header Transparency)
+ |
+ | Fusionado con `initHeaderScrollEffect` (antes en la sección de sombra):
+ | dos listeners de scroll independientes escribían clases de fondo/blur
+ | contradictorias sobre el mismo header en el rango 20–40px, ganando la
+ | que quedara última en el CSS en vez de la que el diseño pedía. Ahora
+ | hay un único estado por rango de scroll y las escrituras se agrupan en
+ | `requestAnimationFrame`.
  * ---------------------------------------------------------------------- */
-
-(function initStickyHeaderScroll() {
-  const header = document.querySelector('[data-header]');
-  if (!header) return;
-
-  const handleScroll = () => {
-    if (window.scrollY > 40) {
-      header.classList.remove('bg-surface/95', 'border-line');
-      header.classList.add('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]');
-    } else {
-      header.classList.remove('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]');
-      header.classList.add('bg-surface/95', 'border-line');
-    }
-  };
-
-  window.addEventListener('scroll', handleScroll, { passive: true });
-  handleScroll(); // Chequeo inicial
-})();
 
 /* -------------------------------------------------------------------------
  | Quick-Add, Quick-View y Carrito AJAX Global
@@ -1536,45 +1525,59 @@ document.addEventListener('click', (e) => {
   counters.forEach((c) => observer.observe(c));
 })();
 
-/* -------------------------------------------------------------------------
- | Efecto de Sombra y Difuminado en el Header al hacer Scroll Down
- * ---------------------------------------------------------------------- */
-
-(function initHeaderScrollEffect() {
+(function initHeaderScroll() {
   const header = document.querySelector('[data-header]');
   const bottomBlur = document.querySelector('[data-bottom-blur]');
   if (!header && !bottomBlur) return;
 
+  const SHADOW = 'shadow-[0_10px_30px_rgba(0,0,0,0.8)]';
   let scrollTimeout;
+  let rafPending = false;
 
-  function checkScroll() {
-    if (window.scrollY > 20) {
-      if (header) {
-        header.classList.add('shadow-[0_10px_30px_rgba(0,0,0,0.8)]', 'bg-surface/90', 'backdrop-blur-md');
-      }
-      if (bottomBlur) {
-        bottomBlur.classList.remove('opacity-0');
-      }
-    } else {
-      if (header) {
-        header.classList.remove('shadow-[0_10px_30px_rgba(0,0,0,0.8)]', 'bg-surface/90', 'backdrop-blur-md');
-      }
-      if (bottomBlur) {
-        bottomBlur.classList.add('opacity-0');
+  function applyState() {
+    rafPending = false;
+    const y = window.scrollY;
+
+    if (header) {
+      if (y > 40) {
+        // Scroll lejos: cabecera casi transparente sobre el contenido.
+        header.classList.remove('bg-surface/95', 'bg-surface/90', 'backdrop-blur-md', 'border-line');
+        header.classList.add('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]', SHADOW);
+      } else if (y > 20) {
+        // Transición: ya se despegó del top, todavía con fondo sólido.
+        header.classList.remove('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]', 'bg-surface/95');
+        header.classList.add('bg-surface/90', 'backdrop-blur-md', 'border-line', SHADOW);
+      } else {
+        // Reposo: arriba del todo.
+        header.classList.remove('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]', 'bg-surface/90', 'backdrop-blur-md', SHADOW);
+        header.classList.add('bg-surface/95', 'border-line');
       }
     }
 
-    // Si el usuario deja de hacer scroll, desvanecer la sombra de fondo
-    clearTimeout(scrollTimeout);
-    if (window.scrollY > 20 && bottomBlur) {
-      scrollTimeout = setTimeout(() => {
+    if (bottomBlur) {
+      if (y > 20) {
+        bottomBlur.classList.remove('opacity-0');
+      } else {
         bottomBlur.classList.add('opacity-0');
-      }, 700); // Se oculta tras 700ms de inactividad de scroll
+      }
+
+      // Si el usuario deja de hacer scroll, desvanecer la sombra de fondo.
+      clearTimeout(scrollTimeout);
+      if (y > 20) {
+        scrollTimeout = setTimeout(() => {
+          bottomBlur.classList.add('opacity-0');
+        }, 700); // Se oculta tras 700ms de inactividad de scroll
+      }
     }
   }
 
-  window.addEventListener('scroll', checkScroll, { passive: true });
-  checkScroll();
+  window.addEventListener('scroll', () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(applyState);
+  }, { passive: true });
+
+  applyState();
 })();
 
 /* -------------------------------------------------------------------------

@@ -120,6 +120,32 @@ add_filter('woocommerce_get_privacy_policy_text', function ($text, $type) {
  * WooCommerce traduce algunas cadenas (como "Shipment") con `_x()`, que usa
  * el hook con contexto — con solo `gettext` esas cadenas quedan en inglés.
  */
+/**
+ * Reemplaza "cuadro"→"marco" solo en los nodos de texto de un fragmento
+ * HTML, nunca dentro de una etiqueta. `str_ireplace` sobre HTML crudo
+ * reescribía también `href`, `src` y `class` de cualquier elemento cuyo
+ * contenido tuviera "cuadro" — un enlace a /producto/cuadro-carbono se
+ * volvía /producto/marco-carbono (404) y su imagen dejaba de cargar.
+ *
+ * @return string
+ */
+function rb_replace_cuadro_outside_tags($html)
+{
+    $segments = preg_split('/(<[^>]+>)/s', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    foreach ($segments as $i => $segment) {
+        if ($segment !== '' && $segment[0] !== '<') {
+            $segments[$i] = preg_replace_callback('/cuadros?/i', function ($match) {
+                $replacement = strlen($match[0]) > 6 ? 'marcos' : 'marco'; // "cuadros" vs "cuadro"
+                // Conserva mayúscula inicial si el texto original la traía.
+                return ctype_upper($match[0][0]) ? ucfirst($replacement) : $replacement;
+            }, $segment);
+        }
+    }
+
+    return implode('', $segments);
+}
+
 function rb_translate_gettext($translation, $text, $domain)
 {
     $translations = [
@@ -161,7 +187,9 @@ function rb_translate_gettext($translation, $text, $domain)
     }
 
     if (str_contains(strtolower($text), 'cuadro') || str_contains(strtolower($translation), 'cuadro')) {
-        return str_ireplace(['Talla de cuadro', 'cuadro', 'cuadros'], ['Talla del marco', 'marco', 'marcos'], $translation);
+        $translation = str_ireplace('Talla de cuadro', 'Talla del marco', $translation);
+
+        return rb_replace_cuadro_outside_tags($translation);
     }
 
     return $translation;
@@ -169,9 +197,7 @@ function rb_translate_gettext($translation, $text, $domain)
 add_filter('gettext', __NAMESPACE__ . '\rb_translate_gettext', 20, 3);
 add_filter('gettext_with_context', __NAMESPACE__ . '\rb_translate_gettext', 20, 3);
 
-add_filter('the_content', function ($content) {
-    return str_ireplace(['cuadro', 'cuadros'], ['marco', 'marcos'], $content);
-}, 20);
+add_filter('the_content', __NAMESPACE__ . '\rb_replace_cuadro_outside_tags', 20);
 
 /**
  * Permitir que WooCommerce busque automáticamente plantillas en resources/views/woocommerce.

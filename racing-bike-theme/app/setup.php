@@ -88,12 +88,16 @@ add_action('after_setup_theme', function () {
     ]);
 
     /**
-     * WooCommerce: usar las plantillas Blade del theme y habilitar la galería.
+     * WooCommerce: usar las plantillas Blade del theme.
+     *
+     * Los soportes de galería (zoom/lightbox/slider) se dejan fuera a
+     * propósito: la galería real la renderiza `product-gallery.blade.php`
+     * con su propio JS (`initEnterpriseGallery`), así que esos tres
+     * add_theme_support solo encolaban jQuery Zoom, PhotoSwipe y
+     * FlexSlider (JS + 2 CSS) en cada ficha de producto sin que se
+     * ejecutaran nunca.
      */
     add_theme_support('woocommerce');
-    add_theme_support('wc-product-gallery-zoom');
-    add_theme_support('wc-product-gallery-lightbox');
-    add_theme_support('wc-product-gallery-slider');
 
     /**
      * Disable the default block patterns.
@@ -393,6 +397,42 @@ add_action('init', function () {
     add_action('wp_enqueue_scripts', $register_dependency, 1);
     add_action('admin_enqueue_scripts', $register_dependency, 1);
     add_action('enqueue_block_assets', $register_dependency, 1);
+});
+
+/**
+ * El muro de Instagram (Smash Balloon) solo se usa en el home
+ * (`front-page.blade.php`), pero el plugin encola sus estilos en cada
+ * página del sitio sin comprobar si el shortcode se está usando. Se
+ * retiran fuera del home para no pagar esa petición en cada ficha de
+ * producto y cada página del catálogo.
+ *
+ * @return void
+ */
+add_action('wp_enqueue_scripts', function () {
+    if (! is_front_page()) {
+        wp_dequeue_style('sbi-tokens-local');
+        wp_dequeue_style('sbi_styles');
+    }
+}, 100);
+
+/**
+ * Invalidar el caché del home (ver `Home::cached()`) cuando cambie algo
+ * que afecte lo que muestra: un producto, un slide o las categorías.
+ *
+ * @return void
+ */
+add_action('init', function () {
+    $clearHomeCache = function () {
+        foreach (['slides', 'categories', 'featured_product_ids', 'sale_product_ids'] as $key) {
+            delete_transient('rb_home_' . $key);
+        }
+    };
+
+    add_action('save_post_product', $clearHomeCache);
+    add_action('save_post_rb_slide', $clearHomeCache);
+    add_action('created_product_cat', $clearHomeCache);
+    add_action('edited_product_cat', $clearHomeCache);
+    add_action('delete_product_cat', $clearHomeCache);
 });
 
 /**

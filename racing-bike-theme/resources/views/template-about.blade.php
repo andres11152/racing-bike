@@ -126,6 +126,8 @@
               <img
                 src="{{ \App\brand_logo_url($brand) }}"
                 alt="{{ $brand->name }}"
+                loading="lazy"
+                decoding="async"
                 class="h-full w-auto object-contain brand-logo-white-green"
               >
             </li>

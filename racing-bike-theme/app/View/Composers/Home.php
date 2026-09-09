@@ -41,31 +41,59 @@ class Home extends Composer
         ];
     }
 
+    /**
+     * Envuelve una consulta cara del home en un transient de corta vida.
+     *
+     * El resultado debe ser serializable en plano (arrays/escalares, nunca
+     * objetos WC_Product ni WP_Post): son los que se guardan sin riesgo en
+     * wp_options. Se invalida al guardar cualquier producto o slide — ver
+     * el hook `save_post` más abajo — así que 15 minutos es solo el techo
+     * para el caso en que no hubo ningún guardado de por medio.
+     *
+     * @return mixed
+     */
+    protected function cached(string $key, callable $callback)
+    {
+        $cacheKey = 'rb_home_' . $key;
+        $value = get_transient($cacheKey);
+
+        if ($value !== false) {
+            return $value;
+        }
+
+        $value = $callback();
+        set_transient($cacheKey, $value, 15 * MINUTE_IN_SECONDS);
+
+        return $value;
+    }
+
     protected function slides(): array
     {
-        $query = new WP_Query([
-            'post_type' => 'rb_slide',
-            'posts_per_page' => 12,
-            'orderby' => 'menu_order',
-            'order' => 'ASC',
-            'no_found_rows' => true,
-        ]);
+        return $this->cached('slides', function () {
+            $query = new WP_Query([
+                'post_type' => 'rb_slide',
+                'posts_per_page' => 12,
+                'orderby' => 'menu_order',
+                'order' => 'ASC',
+                'no_found_rows' => true,
+            ]);
 
-        return collect($query->posts)
-            ->map(fn (WP_Post $slide) => [
-                'id' => $slide->ID,
-                'title' => get_the_title($slide),
-                'eyebrow' => $slide->post_excerpt,
-                'url' => get_post_meta($slide->ID, '_rb_slide_url', true),
-                'cta' => get_post_meta($slide->ID, '_rb_slide_cta', true),
-                'image' => get_the_post_thumbnail_url($slide, 'full') ?: null,
-                'image_desktop' => get_the_post_thumbnail_url($slide, 'full') ?: null,
-                'image_mobile' => get_post_meta($slide->ID, '_rb_slide_image_mobile', true) ?: get_the_post_thumbnail_url($slide, 'full') ?: null,
-                'video_desktop' => get_post_meta($slide->ID, '_rb_slide_video_desktop', true) ?: null,
-                'video_mobile' => get_post_meta($slide->ID, '_rb_slide_video_mobile', true) ?: null,
-                'alt' => get_post_meta(get_post_thumbnail_id($slide), '_wp_attachment_image_alt', true) ?: '',
-            ])
-            ->all();
+            return collect($query->posts)
+                ->map(fn (WP_Post $slide) => [
+                    'id' => $slide->ID,
+                    'title' => get_the_title($slide),
+                    'eyebrow' => $slide->post_excerpt,
+                    'url' => get_post_meta($slide->ID, '_rb_slide_url', true),
+                    'cta' => get_post_meta($slide->ID, '_rb_slide_cta', true),
+                    'image' => get_the_post_thumbnail_url($slide, 'full') ?: null,
+                    'image_desktop' => get_the_post_thumbnail_url($slide, 'full') ?: null,
+                    'image_mobile' => get_post_meta($slide->ID, '_rb_slide_image_mobile', true) ?: get_the_post_thumbnail_url($slide, 'full') ?: null,
+                    'video_desktop' => get_post_meta($slide->ID, '_rb_slide_video_desktop', true) ?: null,
+                    'video_mobile' => get_post_meta($slide->ID, '_rb_slide_video_mobile', true) ?: null,
+                    'alt' => get_post_meta(get_post_thumbnail_id($slide), '_wp_attachment_image_alt', true) ?: '',
+                ])
+                ->all();
+        });
     }
 
     /**
@@ -79,30 +107,32 @@ class Home extends Composer
             return [];
         }
 
-        $terms = get_terms([
-            'taxonomy' => 'product_cat',
-            'parent' => 0,
-            'hide_empty' => true,
-            'exclude' => [get_option('default_product_cat')],
-        ]);
+        return $this->cached('categories', function () {
+            $terms = get_terms([
+                'taxonomy' => 'product_cat',
+                'parent' => 0,
+                'hide_empty' => true,
+                'exclude' => [get_option('default_product_cat')],
+            ]);
 
-        if (is_wp_error($terms)) {
-            return [];
-        }
+            if (is_wp_error($terms)) {
+                return [];
+            }
 
-        return collect($terms)
-            ->map(function ($term) {
-                $thumbnailId = get_term_meta($term->term_id, 'thumbnail_id', true);
-                $link = get_term_link($term);
+            return collect($terms)
+                ->map(function ($term) {
+                    $thumbnailId = get_term_meta($term->term_id, 'thumbnail_id', true);
+                    $link = get_term_link($term);
 
-                return [
-                    'name' => $term->name,
-                    'url' => is_wp_error($link) ? '' : $link,
-                    'count' => (int) $term->count,
-                    'image' => $thumbnailId ? wp_get_attachment_image_url((int) $thumbnailId, 'large') : null,
-                ];
-            })
-            ->all();
+                    return [
+                        'name' => $term->name,
+                        'url' => is_wp_error($link) ? '' : $link,
+                        'count' => (int) $term->count,
+                        'image' => $thumbnailId ? wp_get_attachment_image_url((int) $thumbnailId, 'large') : null,
+                    ];
+                })
+                ->all();
+        });
     }
 
     /**
@@ -116,24 +146,32 @@ class Home extends Composer
             return [];
         }
 
-        $products = wc_get_products([
-            'featured' => true,
-            'limit' => 4,
-            'status' => 'publish',
-            'orderby' => 'date',
-            'order' => 'DESC',
-        ]);
-
-        if (! $products) {
+        // Se cachean los IDs, no los objetos WC_Product: no son
+        // serializables de forma segura en un transient.
+        $ids = $this->cached('featured_product_ids', function () {
             $products = wc_get_products([
+                'featured' => true,
                 'limit' => 4,
                 'status' => 'publish',
                 'orderby' => 'date',
                 'order' => 'DESC',
+                'return' => 'ids',
             ]);
-        }
 
-        return $products;
+            if (! $products) {
+                $products = wc_get_products([
+                    'limit' => 4,
+                    'status' => 'publish',
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                    'return' => 'ids',
+                ]);
+            }
+
+            return $products;
+        });
+
+        return collect($ids)->map('wc_get_product')->filter()->all();
     }
 
     /**
@@ -147,29 +185,31 @@ class Home extends Composer
             return [];
         }
 
-        $ids = wc_get_product_ids_on_sale();
+        $parentIds = $this->cached('sale_product_ids', function () {
+            $ids = wc_get_product_ids_on_sale();
 
-        if (! $ids) {
-            return [];
-        }
+            if (! $ids) {
+                return [];
+            }
 
-        // La lista mezcla productos y variaciones. Una variación en oferta debe
-        // mostrarse como su producto padre, o las bicicletas rebajadas se pierden.
-        $parentIds = collect($ids)
-            ->map(function ($id) {
-                $product = wc_get_product($id);
+            // La lista mezcla productos y variaciones. Una variación en oferta debe
+            // mostrarse como su producto padre, o las bicicletas rebajadas se pierden.
+            return collect($ids)
+                ->map(function ($id) {
+                    $product = wc_get_product($id);
 
-                if (! $product) {
-                    return null;
-                }
+                    if (! $product) {
+                        return null;
+                    }
 
-                return $product->get_parent_id() ?: $product->get_id();
-            })
-            ->filter()
-            ->unique()
-            ->take(4)
-            ->values()
-            ->all();
+                    return $product->get_parent_id() ?: $product->get_id();
+                })
+                ->filter()
+                ->unique()
+                ->take(4)
+                ->values()
+                ->all();
+        });
 
         if (! $parentIds) {
             return [];
