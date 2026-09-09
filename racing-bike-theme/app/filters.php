@@ -386,8 +386,10 @@ add_action('wp_ajax_nopriv_rb_change_cart_qty', $changeCartQtyHandler);
  * AJAX Handler para Quick-View de producto.
  */
 $quickViewHandler = function () {
+    check_ajax_referer('rb_cart_nonce', 'nonce');
+
     $product_id = isset($_GET['product_id']) ? absint($_GET['product_id']) : 0;
-    if ($product_id > 0) {
+    if ($product_id > 0 && get_post_status($product_id) === 'publish') {
         $product = wc_get_product($product_id);
         if ($product) {
             global $product, $post;

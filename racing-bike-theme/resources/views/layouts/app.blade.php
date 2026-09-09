@@ -15,7 +15,6 @@
 
   <body @php(body_class())>
     @php(wp_body_open())
-    <x-preloader />
 
     {{-- Fondo ambiental de haces de luz — fijo al viewport, detrás de todo.
          Se asoma por las secciones sin fondo opaco propio (héroe, franjas

@@ -158,17 +158,6 @@ add_action('wp_enqueue_scripts', function () {
 }, 100);
 
 /**
- * Permitir framing y ejecución de scripts para simuladores móviles y vistas responsivas.
- */
-add_action('send_headers', function () {
-    if (! is_admin()) {
-        header_remove('X-Frame-Options');
-        header('Access-Control-Allow-Origin: *');
-        header("Content-Security-Policy: default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *;");
-    }
-}, 100);
-
-/**
  * Register the theme sidebars.
  *
  * @return void

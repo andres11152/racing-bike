@@ -988,7 +988,7 @@ document.addEventListener('click', (e) => {
     document.body.classList.add('overflow-hidden');
     modal.querySelector('[data-quick-view-close], [data-close-quick-view]')?.focus();
 
-    fetch(`${window.rbAjax?.url ?? '/wp-admin/admin-ajax.php'}?action=rb_quick_view&product_id=${productId}`)
+    fetch(`${window.rbAjax?.url ?? '/wp-admin/admin-ajax.php'}?action=rb_quick_view&product_id=${productId}&nonce=${window.rbAjax?.nonce ?? ''}`)
       .then((res) => res.text())
       .then((html) => {
         target.innerHTML = html;
