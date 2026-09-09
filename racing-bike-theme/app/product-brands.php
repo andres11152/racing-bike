@@ -290,3 +290,49 @@ function save_brand_logo_meta($term_id)
 }
 add_action('created_'.BRAND_TAXONOMY, __NAMESPACE__.'\\save_brand_logo_meta');
 add_action('edited_'.BRAND_TAXONOMY, __NAMESPACE__.'\\save_brand_logo_meta');
+
+/**
+ * Espejo hacia pa_marca de cualquier marca asignada por la taxonomía nativa
+ * de WooCommerce (Productos > Marcas, product_brand).
+ *
+ * El theme entero —filtro de tienda, ficha de producto, tarjeta de
+ * producto— lee la marca desde pa_marca (ver la cabecera de este archivo).
+ * product_brand es una función nativa de WooCommerce que existe en paralelo
+ * y no tiene ninguna relación con pa_marca por defecto: si alguien asigna
+ * la marca desde ahí en vez del atributo, el producto queda sin logo ni
+ * filtro sin que se note (así se encontraron 31 productos sin sincronizar
+ * el 2026-09-09). Este hook hace que da igual cuál de las dos pantallas
+ * use quien administre la tienda — nunca quita nada de pa_marca, solo
+ * agrega lo que falte.
+ *
+ * @return void
+ */
+add_action('set_object_terms', function ($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids) {
+    if ($taxonomy !== 'product_brand' || get_post_type($object_id) !== 'product') {
+        return;
+    }
+
+    foreach ($tt_ids as $tt_id) {
+        $brandTerm = get_term_by('term_taxonomy_id', $tt_id, 'product_brand');
+
+        if (! $brandTerm || is_wp_error($brandTerm)) {
+            continue;
+        }
+
+        $marcaTerm = get_term_by('slug', $brandTerm->slug, BRAND_TAXONOMY);
+
+        if (! $marcaTerm) {
+            $inserted = wp_insert_term($brandTerm->name, BRAND_TAXONOMY, ['slug' => $brandTerm->slug]);
+
+            if (is_wp_error($inserted)) {
+                continue;
+            }
+
+            $marcaTerm = get_term($inserted['term_id'], BRAND_TAXONOMY);
+        }
+
+        if ($marcaTerm && ! is_wp_error($marcaTerm) && ! has_term($marcaTerm->term_id, BRAND_TAXONOMY, $object_id)) {
+            wp_set_object_terms($object_id, $marcaTerm->term_id, BRAND_TAXONOMY, true);
+        }
+    }
+}, 10, 6);
