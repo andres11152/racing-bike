@@ -1,5 +1,6 @@
 @props([
   'activeFilters' => [],
+  'showTitle' => true,
 ])
 
 @php
@@ -23,14 +24,18 @@
 @endphp
 
 <div class="space-y-8">
-  <div class="flex items-center justify-between border-b border-line pb-4">
-    <h2 class="text-xs font-semibold uppercase tracking-widest text-ink">{{ __('Filtros', 'sage') }}</h2>
-    @if ($hasFilters)
-      <a href="{{ $currentUrl }}" class="text-xs font-medium text-ink-subtle hover:text-ink underline transition-colors">
-        {{ __('Limpiar todo', 'sage') }}
-      </a>
-    @endif
-  </div>
+  @if ($showTitle || $hasFilters)
+    <div class="flex items-center justify-between border-b border-line pb-4">
+      @if ($showTitle)
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-ink">{{ __('Filtros', 'sage') }}</h2>
+      @endif
+      @if ($hasFilters)
+        <a href="{{ $currentUrl }}" class="text-xs font-medium text-ink-subtle hover:text-ink underline transition-colors">
+          {{ __('Limpiar todo', 'sage') }}
+        </a>
+      @endif
+    </div>
+  @endif
 
   @foreach ($taxonomies as $taxonomy => $label)
     @php

@@ -115,7 +115,7 @@
         </button>
       </div>
 
-      <x-filter-sidebar />
+      <x-filter-sidebar :show-title="false" />
     </div>
   </div>
 
