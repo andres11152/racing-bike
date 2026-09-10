@@ -1,7 +1,7 @@
 {{--
   Plantilla de Lista de Deseos de Mi Cuenta.
   Los productos vienen ya resueltos (y filtrados a publicados) desde
-  fiveam_wishlist_get() en el plugin Skycode Wishlist.
+  skycode_wishlist_get() en el plugin Skycode Wishlist.
 --}}
 
 @php

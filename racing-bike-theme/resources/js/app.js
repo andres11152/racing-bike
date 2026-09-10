@@ -2034,7 +2034,7 @@ if ('serviceWorker' in navigator) {
     }).then((res) => res.json());
   }
 
-  const config = window.FiveAmWishlist || { isLoggedIn: false, items: [] };
+  const config = window.SkycodeWishlist || window.FiveAmWishlist || { isLoggedIn: false, items: [] };
   let currentIds = config.isLoggedIn ? (config.items || []).map(Number) : getGuestIds();
 
   render(currentIds);

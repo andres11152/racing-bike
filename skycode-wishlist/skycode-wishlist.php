@@ -1,18 +1,21 @@
 <?php
 /**
  * Plugin Name: Skycode Wishlist
- * Description: Saved-items list for 5AMGYM. Owns the wishlist data and logic; the theme only supplies the markup. Kept out of the theme deliberately — a wishlist is customer data, and it has to survive the theme being changed or rebuilt.
+ * Description: Lista de deseos / productos guardados para WooCommerce. Gestiona los datos y lógica de la lista de deseos independiente del tema.
  * Version: 1.0.0
- * Author: Antigravity
- * Text Domain: 5am-wishlist
+ * Author: Skycode Agency
+ * License: GPL2
+ * Text Domain: skycode-wishlist
  */
 
 if (! defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-const FIVEAM_WISHLIST_META_KEY = '_5am_wishlist';
-const FIVEAM_WISHLIST_ENDPOINT = 'wishlist';
+const SKYCODE_WISHLIST_META_KEY = '_skycode_wishlist';
+const FIVEAM_WISHLIST_META_KEY = '_5am_wishlist'; // Compatibilidad retroactiva
+const SKYCODE_WISHLIST_ENDPOINT = 'wishlist';
+const FIVEAM_WISHLIST_ENDPOINT = SKYCODE_WISHLIST_ENDPOINT; // Compatibilidad retroactiva
 
 /* -------------------------------------------------------------------------
  | 1. Storage
@@ -20,7 +23,7 @@ const FIVEAM_WISHLIST_ENDPOINT = 'wishlist';
  | Signed-in shoppers persist to user meta. Guests keep their list in
  | localStorage on the client, so every read here returns an empty list for
  | them — the browser is the source of truth until they sign in, at which
- | point fiveam_wishlist_merge() folds it into their account.
+ | point skycode_wishlist_merge() folds it into their account.
  * ---------------------------------------------------------------------- */
 
 /**
@@ -28,12 +31,22 @@ const FIVEAM_WISHLIST_ENDPOINT = 'wishlist';
  *
  * @return int[]
  */
-function fiveam_wishlist_get(): array {
+function skycode_wishlist_get(): array {
     if (! is_user_logged_in()) {
         return [];
     }
 
-    $ids = get_user_meta(get_current_user_id(), FIVEAM_WISHLIST_META_KEY, true);
+    $userId = get_current_user_id();
+    $ids = get_user_meta($userId, SKYCODE_WISHLIST_META_KEY, true);
+
+    // Compatibilidad retroactiva con _5am_wishlist
+    if (! is_array($ids) || empty($ids)) {
+        $legacy = get_user_meta($userId, FIVEAM_WISHLIST_META_KEY, true);
+        if (is_array($legacy) && ! empty($legacy)) {
+            $ids = $legacy;
+            update_user_meta($userId, SKYCODE_WISHLIST_META_KEY, $ids);
+        }
+    }
 
     if (! is_array($ids)) {
         return [];
@@ -47,14 +60,14 @@ function fiveam_wishlist_get(): array {
  *
  * @param int[] $ids
  */
-function fiveam_wishlist_save(array $ids): void {
+function skycode_wishlist_save(array $ids): void {
     if (! is_user_logged_in()) {
         return;
     }
 
     $clean = array_values(array_unique(array_filter(array_map('absint', $ids))));
 
-    update_user_meta(get_current_user_id(), FIVEAM_WISHLIST_META_KEY, $clean);
+    update_user_meta(get_current_user_id(), SKYCODE_WISHLIST_META_KEY, $clean);
 }
 
 /**
@@ -63,8 +76,8 @@ function fiveam_wishlist_save(array $ids): void {
  * Guests always read false here; their state is applied client-side from
  * localStorage once the page loads.
  */
-function fiveam_wishlist_has(int $productId): bool {
-    return in_array(absint($productId), fiveam_wishlist_get(), true);
+function skycode_wishlist_has(int $productId): bool {
+    return in_array(absint($productId), skycode_wishlist_get(), true);
 }
 
 /**
@@ -72,9 +85,9 @@ function fiveam_wishlist_has(int $productId): bool {
  *
  * @return array{saved: bool, count: int}
  */
-function fiveam_wishlist_toggle(int $productId): array {
+function skycode_wishlist_toggle(int $productId): array {
     $productId = absint($productId);
-    $ids = fiveam_wishlist_get();
+    $ids = skycode_wishlist_get();
     $index = array_search($productId, $ids, true);
 
     if ($index === false) {
@@ -85,11 +98,11 @@ function fiveam_wishlist_toggle(int $productId): array {
         $saved = false;
     }
 
-    fiveam_wishlist_save($ids);
+    skycode_wishlist_save($ids);
 
     return [
         'saved' => $saved,
-        'count' => count(fiveam_wishlist_get()),
+        'count' => count(skycode_wishlist_get()),
     ];
 }
 
@@ -102,8 +115,8 @@ function fiveam_wishlist_toggle(int $productId): array {
  * @param int[] $ids
  * @return int[] The merged list.
  */
-function fiveam_wishlist_merge(array $ids): array {
-    $merged = array_merge(fiveam_wishlist_get(), array_map('absint', $ids));
+function skycode_wishlist_merge(array $ids): array {
+    $merged = array_merge(skycode_wishlist_get(), array_map('absint', $ids));
 
     // Only keep IDs that still resolve to a published product.
     $merged = array_filter($merged, function ($id) {
@@ -112,9 +125,9 @@ function fiveam_wishlist_merge(array $ids): array {
         return $product && $product->get_status() === 'publish';
     });
 
-    fiveam_wishlist_save($merged);
+    skycode_wishlist_save($merged);
 
-    return fiveam_wishlist_get();
+    return skycode_wishlist_get();
 }
 
 /* -------------------------------------------------------------------------
@@ -125,10 +138,10 @@ function fiveam_wishlist_merge(array $ids): array {
  | whole storefront rather than a second one to keep in step.
  * ---------------------------------------------------------------------- */
 
-add_action('wp_ajax_rb_toggle_wishlist', 'fiveam_wishlist_ajax_toggle');
-add_action('wp_ajax_nopriv_rb_toggle_wishlist', 'fiveam_wishlist_ajax_toggle');
+add_action('wp_ajax_rb_toggle_wishlist', 'skycode_wishlist_ajax_toggle');
+add_action('wp_ajax_nopriv_rb_toggle_wishlist', 'skycode_wishlist_ajax_toggle');
 
-function fiveam_wishlist_ajax_toggle(): void {
+function skycode_wishlist_ajax_toggle(): void {
     if (! check_ajax_referer('rb_cart_nonce', 'nonce', false)) {
         wp_send_json_error(['message' => 'Invalid security token'], 403);
     }
@@ -145,12 +158,12 @@ function fiveam_wishlist_ajax_toggle(): void {
         wp_send_json_success(['guest' => true]);
     }
 
-    wp_send_json_success(fiveam_wishlist_toggle($productId));
+    wp_send_json_success(skycode_wishlist_toggle($productId));
 }
 
-add_action('wp_ajax_rb_merge_wishlist', 'fiveam_wishlist_ajax_merge');
+add_action('wp_ajax_rb_merge_wishlist', 'skycode_wishlist_ajax_merge');
 
-function fiveam_wishlist_ajax_merge(): void {
+function skycode_wishlist_ajax_merge(): void {
     if (! check_ajax_referer('rb_cart_nonce', 'nonce', false)) {
         wp_send_json_error(['message' => 'Invalid security token'], 403);
     }
@@ -158,27 +171,27 @@ function fiveam_wishlist_ajax_merge(): void {
     $raw = isset($_POST['ids']) ? (array) $_POST['ids'] : [];
 
     wp_send_json_success([
-        'items' => fiveam_wishlist_merge(array_map('absint', $raw)),
+        'items' => skycode_wishlist_merge(array_map('absint', $raw)),
     ]);
 }
 
 /* -------------------------------------------------------------------------
  | 3. Frontend configuration
  |
- | Published separately from the theme's FiveAmConfig so the plugin stays
- | self-contained: deactivate it and nothing in the theme breaks.
+ | Published separately from the theme so the plugin stays self-contained:
+ | deactivate it and nothing in the theme breaks.
  * ---------------------------------------------------------------------- */
 
 add_action('wp_head', function () {
     $config = [
         'isLoggedIn' => is_user_logged_in(),
-        'items' => fiveam_wishlist_get(),
+        'items' => skycode_wishlist_get(),
         'endpointUrl' => function_exists('wc_get_account_endpoint_url')
-            ? wc_get_account_endpoint_url(FIVEAM_WISHLIST_ENDPOINT)
+            ? wc_get_account_endpoint_url(SKYCODE_WISHLIST_ENDPOINT)
             : '',
     ];
 
-    echo '<script>window.FiveAmWishlist = ' . wp_json_encode($config) . ';</script>' . "\n";
+    echo '<script>window.SkycodeWishlist = window.FiveAmWishlist = ' . wp_json_encode($config) . ';</script>' . "\n";
 }, 6);
 
 /* -------------------------------------------------------------------------
@@ -186,11 +199,11 @@ add_action('wp_head', function () {
  * ---------------------------------------------------------------------- */
 
 add_action('init', function () {
-    add_rewrite_endpoint(FIVEAM_WISHLIST_ENDPOINT, EP_ROOT | EP_PAGES);
+    add_rewrite_endpoint(SKYCODE_WISHLIST_ENDPOINT, EP_ROOT | EP_PAGES);
 });
 
 add_filter('woocommerce_get_query_vars', function ($vars) {
-    $vars[FIVEAM_WISHLIST_ENDPOINT] = FIVEAM_WISHLIST_ENDPOINT;
+    $vars[SKYCODE_WISHLIST_ENDPOINT] = SKYCODE_WISHLIST_ENDPOINT;
 
     return $vars;
 });
@@ -201,7 +214,7 @@ add_filter('woocommerce_get_query_vars', function ($vars) {
  */
 add_filter('woocommerce_account_menu_items', function ($items) {
     $position = array_search('edit-account', array_keys($items), true);
-    $entry = [FIVEAM_WISHLIST_ENDPOINT => __('My Wishlist', '5am-wishlist')];
+    $entry = [SKYCODE_WISHLIST_ENDPOINT => __('My Wishlist', 'skycode-wishlist')];
 
     if ($position === false) {
         return $items + $entry;
@@ -212,8 +225,8 @@ add_filter('woocommerce_account_menu_items', function ($items) {
         + array_slice($items, $position, null, true);
 });
 
-add_action('woocommerce_account_' . FIVEAM_WISHLIST_ENDPOINT . '_endpoint', function () {
-    $ids = fiveam_wishlist_get();
+add_action('woocommerce_account_' . SKYCODE_WISHLIST_ENDPOINT . '_endpoint', function () {
+    $ids = skycode_wishlist_get();
     $products = [];
 
     foreach ($ids as $id) {
@@ -255,8 +268,54 @@ add_action('woocommerce_account_' . FIVEAM_WISHLIST_ENDPOINT . '_endpoint', func
  * ---------------------------------------------------------------------- */
 
 register_activation_hook(__FILE__, function () {
-    add_rewrite_endpoint(FIVEAM_WISHLIST_ENDPOINT, EP_ROOT | EP_PAGES);
+    add_rewrite_endpoint(SKYCODE_WISHLIST_ENDPOINT, EP_ROOT | EP_PAGES);
     flush_rewrite_rules();
 });
 
 register_deactivation_hook(__FILE__, 'flush_rewrite_rules');
+
+/* -------------------------------------------------------------------------
+ | 6. Backward compatibility aliases
+ * ---------------------------------------------------------------------- */
+
+if (! function_exists('fiveam_wishlist_get')) {
+    function fiveam_wishlist_get(): array {
+        return skycode_wishlist_get();
+    }
+}
+
+if (! function_exists('fiveam_wishlist_save')) {
+    function fiveam_wishlist_save(array $ids): void {
+        skycode_wishlist_save($ids);
+    }
+}
+
+if (! function_exists('fiveam_wishlist_has')) {
+    function fiveam_wishlist_has(int $productId): bool {
+        return skycode_wishlist_has($productId);
+    }
+}
+
+if (! function_exists('fiveam_wishlist_toggle')) {
+    function fiveam_wishlist_toggle(int $productId): array {
+        return skycode_wishlist_toggle($productId);
+    }
+}
+
+if (! function_exists('fiveam_wishlist_merge')) {
+    function fiveam_wishlist_merge(array $ids): array {
+        return skycode_wishlist_merge($ids);
+    }
+}
+
+if (! function_exists('fiveam_wishlist_ajax_toggle')) {
+    function fiveam_wishlist_ajax_toggle(): void {
+        skycode_wishlist_ajax_toggle();
+    }
+}
+
+if (! function_exists('fiveam_wishlist_ajax_merge')) {
+    function fiveam_wishlist_ajax_merge(): void {
+        skycode_wishlist_ajax_merge();
+    }
+}

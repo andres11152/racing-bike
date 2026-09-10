@@ -62,7 +62,7 @@ services:
       - ./skycode-cart-recovery:/var/www/html/wp-content/plugins/skycode-cart-recovery
       - ./skycode-maintenance:/var/www/html/wp-content/plugins/skycode-maintenance
       - ./skycode-modal:/var/www/html/wp-content/plugins/skycode-modal
-      - ./5am-wishlist:/var/www/html/wp-content/plugins/5am-wishlist
+      - ./skycode-wishlist:/var/www/html/wp-content/plugins/skycode-wishlist
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
 
 
@@ -91,7 +91,7 @@ services:
       - ./skycode-cart-recovery:/var/www/html/wp-content/plugins/skycode-cart-recovery
       - ./skycode-maintenance:/var/www/html/wp-content/plugins/skycode-maintenance
       - ./skycode-modal:/var/www/html/wp-content/plugins/skycode-modal
-      - ./5am-wishlist:/var/www/html/wp-content/plugins/5am-wishlist
+      - ./skycode-wishlist:/var/www/html/wp-content/plugins/skycode-wishlist
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
 
 volumes:
