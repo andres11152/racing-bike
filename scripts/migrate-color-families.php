@@ -155,6 +155,31 @@ foreach (RB_COLOR_FAMILIES as $slug => $name) {
     }
 }
 
+// 2b. Guardar la familia como term meta en cada término de pa_color.
+//
+//     El array RB_COLOR_TERM_TO_FAMILY vive en este script, que solo corre
+//     a mano; el theme necesita resolver "¿de qué familia es este tono?" en
+//     cada render de tarjeta (para elegir la imagen de la variación que
+//     coincide con el filtro activo). Guardarlo como meta lo hace
+//     consultable sin duplicar la tabla en el theme.
+$metaEscritos = 0;
+
+foreach (RB_COLOR_TERM_TO_FAMILY as $colorTermId => $familySlug) {
+    $actual = get_term_meta($colorTermId, '_rb_color_family', true);
+
+    if ($actual === $familySlug) {
+        continue;
+    }
+
+    $metaEscritos++;
+
+    if ($apply) {
+        update_term_meta($colorTermId, '_rb_color_family', $familySlug);
+    }
+}
+
+echo "Términos de pa_color a los que se les guarda su familia: {$metaEscritos}\n\n";
+
 // 3. Para cada producto con un color de pa_color mapeado, asignar su
 //    familia correspondiente en pa_color-familia.
 $ids = get_posts([

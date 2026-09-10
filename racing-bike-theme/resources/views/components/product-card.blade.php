@@ -58,11 +58,14 @@
           continue;
         }
 
-        $name = $attribute->get_name();
-        $label = wc_attribute_label($name);
+        // Ojo con el nombre de esta variable: `$name` guarda el nombre del
+        // producto y lo pinta el <h3> de más abajo. Reutilizarla aquí hacía
+        // que toda tarjeta de producto variable se titulara "pa_talla-cuadro".
+        $attributeName = $attribute->get_name();
+        $attributeLabel = wc_attribute_label($attributeName);
 
-        if (stripos($name, 'talla') !== false || stripos($label, 'talla') !== false) {
-          $sizeAttributeKey = 'attribute_' . sanitize_title($name);
+        if (stripos($attributeName, 'talla') !== false || stripos($attributeLabel, 'talla') !== false) {
+          $sizeAttributeKey = 'attribute_' . sanitize_title($attributeName);
           break;
         }
       }
@@ -82,6 +85,51 @@
             ];
           }
         }
+      }
+    }
+
+    // Imagen del color que el comprador está filtrando.
+    //
+    // Sin esto la tarjeta siempre pinta la imagen principal del producto:
+    // filtrar por Azul devolvía la foto verde, porque en varios productos
+    // el cliente dejó la misma foto en todas las variaciones de color. Si
+    // hay un filtro activo y alguna variación de esa familia tiene foto
+    // propia, esa manda.
+    if ($product->is_type('variable') && ! empty($_GET['filter_color-familia'])) {
+      $activeFamily = sanitize_title(strtok(wp_unslash($_GET['filter_color-familia']), ','));
+      $variationIds = $product->get_children();
+
+      // Una sola consulta para todas las variaciones, en vez de una por
+      // cada get_post_meta() del bucle.
+      update_meta_cache('post', $variationIds);
+
+      foreach ($variationIds as $variationId) {
+        $ownImageId = (int) get_post_meta($variationId, '_thumbnail_id', true);
+
+        // Sin foto propia hereda la del padre: no aporta nada distinto.
+        if (! $ownImageId) {
+          continue;
+        }
+
+        // Conviven dos esquemas de variación según cómo se cargó cada
+        // producto: taxonomía (pa_color) y atributo de texto libre (color).
+        $rawColor = get_post_meta($variationId, 'attribute_pa_color', true)
+          ?: get_post_meta($variationId, 'attribute_color', true);
+
+        if (! $rawColor) {
+          continue;
+        }
+
+        $colorTerm = get_term_by('slug', sanitize_title($rawColor), 'pa_color');
+
+        if (! $colorTerm || get_term_meta($colorTerm->term_id, '_rb_color_family', true) !== $activeFamily) {
+          continue;
+        }
+
+        $imageId = $ownImageId;
+        $image = wp_get_attachment_image_url($imageId, 'full');
+        $imageAlt = get_post_meta($imageId, '_wp_attachment_image_alt', true) ?: $name;
+        break;
       }
     }
 
