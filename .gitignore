@@ -5,6 +5,7 @@
 backup.wpress
 output_dir/
 extracted_backup/
+backups/
 
 # Artefactos generados — se reconstruyen con composer/npm, no se versionan
 racing-bike-theme/node_modules/
