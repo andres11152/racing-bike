@@ -44,20 +44,43 @@
     }
 
     // Tallas del marco disponibles, para el swatch de la tarjeta.
+    //
+    // El slug del atributo de talla no es uniforme en el catálogo del
+    // cliente (pa_talla-cuadro, pa_talla, talla, según cuándo y quién cargó
+    // el producto), así que en vez de asumir uno fijo se busca por nombre
+    // ("talla" en el slug o en la etiqueta) entre los atributos usados para
+    // variaciones de este producto en particular.
     if (! $sizes && $product->is_type('variable')) {
-      $sizeTaxonomy = 'pa_talla-cuadro';
-      $available = $product->get_available_variations();
-      $seen = [];
+      $sizeAttributeKey = null;
 
-      foreach ($available as $variation) {
-        $value = $variation['attributes']['attribute_' . $sizeTaxonomy] ?? null;
+      foreach ($product->get_attributes() as $attribute) {
+        if (! $attribute->get_variation()) {
+          continue;
+        }
 
-        if ($value && ! isset($seen[$value])) {
-          $seen[$value] = true;
-          $sizes[] = [
-            'label' => strtoupper($value),
-            'inStock' => (bool) $variation['is_in_stock'],
-          ];
+        $name = $attribute->get_name();
+        $label = wc_attribute_label($name);
+
+        if (stripos($name, 'talla') !== false || stripos($label, 'talla') !== false) {
+          $sizeAttributeKey = 'attribute_' . sanitize_title($name);
+          break;
+        }
+      }
+
+      if ($sizeAttributeKey) {
+        $available = $product->get_available_variations();
+        $seen = [];
+
+        foreach ($available as $variation) {
+          $value = $variation['attributes'][$sizeAttributeKey] ?? null;
+
+          if ($value && ! isset($seen[$value])) {
+            $seen[$value] = true;
+            $sizes[] = [
+              'label' => strtoupper($value),
+              'inStock' => (bool) $variation['is_in_stock'],
+            ];
+          }
         }
       }
     }
