@@ -9,12 +9,18 @@
   // mostrarlos solo agregaría secciones vacías. La talla real vive en
   // pa_talla (antes repartida entre esa taxonomía y un atributo de texto
   // libre "talla"; ver scripts/migrate-custom-attributes.php).
+  //
+  // El filtro de Color usa pa_color-familia (9 familias: Azul, Rojo...),
+  // no pa_color directo — pa_color tiene ~76 tonos exactos de fabricante
+  // ("Halo Silver - Tanzanite (Gloss)"), correctos para la ficha de
+  // producto pero inservibles como filtro (abruma, la mayoría con 1 solo
+  // producto). Ver scripts/migrate-color-families.php para el mapeo.
   $taxonomies = [
     'pa_marca' => __('Marca', 'sage'),
     'pa_disciplina' => __('Disciplina', 'sage'),
     'pa_material' => __('Material', 'sage'),
     'pa_talla' => __('Talla', 'sage'),
-    'pa_color' => __('Color', 'sage'),
+    'pa_color-familia' => __('Color', 'sage'),
   ];
 
   $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '', '?');

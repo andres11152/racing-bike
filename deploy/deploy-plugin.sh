@@ -2,7 +2,7 @@
 # Despliega un plugin a producción y limpia la caché de vistas.
 #
 # Uso: deploy/deploy-plugin.sh <carpeta-del-plugin>
-#   deploy/deploy-plugin.sh 5am-wishlist
+#   deploy/deploy-plugin.sh skycode-wishlist
 #   deploy/deploy-plugin.sh skycode-smtp
 
 set -euo pipefail
