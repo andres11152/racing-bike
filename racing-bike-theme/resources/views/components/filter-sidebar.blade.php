@@ -4,12 +4,17 @@
 ])
 
 @php
+  // pa_grupo y pa_talla-cuadro se quitaron de aquí: existen como vocabulario
+  // en WooCommerce > Atributos pero ningún producto los tiene asignados —
+  // mostrarlos solo agregaría secciones vacías. La talla real vive en
+  // pa_talla (antes repartida entre esa taxonomía y un atributo de texto
+  // libre "talla"; ver scripts/migrate-custom-attributes.php).
   $taxonomies = [
     'pa_marca' => __('Marca', 'sage'),
     'pa_disciplina' => __('Disciplina', 'sage'),
     'pa_material' => __('Material', 'sage'),
-    'pa_grupo' => __('Grupo', 'sage'),
-    'pa_talla-cuadro' => __('Talla del marco', 'sage'),
+    'pa_talla' => __('Talla', 'sage'),
+    'pa_color' => __('Color', 'sage'),
   ];
 
   $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '', '?');
