@@ -191,6 +191,21 @@
         >
       @endif
 
+      @if ($product)
+        {{-- Botón Wishlist (Heart) — siempre visible, independiente del stock --}}
+        <button
+          type="button"
+          class="absolute bottom-3 left-3 z-30 flex size-9 items-center justify-center rounded-full bg-surface/95 text-ink shadow-md border border-white/10 opacity-0 scale-90 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 focus-within:opacity-100 max-md:opacity-100 max-md:translate-y-0 max-md:scale-100 hover:bg-emerald-400 hover:text-black hover:border-emerald-400 cursor-pointer touch-manipulation data-[wishlist-active=true]:text-red-500 data-[wishlist-active=true]:[&_svg]:fill-current"
+          aria-label="{{ sprintf(__('Guardar %s en mi lista de deseos', 'sage'), $name) }}"
+          aria-pressed="false"
+          data-wishlist-toggle="{{ $product->get_id() }}"
+          data-wishlist-active="false"
+          onclick="event.preventDefault(); event.stopPropagation();"
+        >
+          <x-icon name="heart" class="size-4 pointer-events-none" />
+        </button>
+      @endif
+
       @if ($inStock && $product)
         <div class="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 opacity-0 scale-90 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 focus-within:opacity-100 max-md:opacity-100 max-md:translate-y-0 max-md:scale-100">
           {{-- Botón Vista Rápida (Eye) --}}

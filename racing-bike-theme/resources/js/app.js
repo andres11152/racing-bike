@@ -1974,3 +1974,128 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+/* -------------------------------------------------------------------------
+ | Wishlist (Skycode Wishlist)
+ |
+ | El plugin solo guarda datos; toda la UI vive aquí. Invitados persisten en
+ | localStorage porque no hay cuenta a la que escribir; al iniciar sesión el
+ | array local se fusiona una sola vez contra el servidor (rb_merge_wishlist)
+ | y luego se limpia, para no reenviarlo en cada carga de página.
+ * ---------------------------------------------------------------------- */
+(function initWishlist() {
+  const GUEST_KEY = 'rb_wishlist_guest';
+
+  function getGuestIds() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(GUEST_KEY) || '[]');
+      return Array.isArray(raw) ? raw.map(Number).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setGuestIds(ids) {
+    try {
+      localStorage.setItem(GUEST_KEY, JSON.stringify(ids));
+    } catch {
+      // Almacenamiento no disponible (modo privado, cuota llena): la wishlist
+      // de invitado simplemente no persiste entre recargas.
+    }
+  }
+
+  function paintButtons(ids) {
+    document.querySelectorAll('[data-wishlist-toggle]').forEach((btn) => {
+      const active = ids.includes(Number(btn.dataset.wishlistToggle));
+      btn.dataset.wishlistActive = active ? 'true' : 'false';
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
+  function paintCount(count) {
+    document.querySelectorAll('[data-wishlist-count]').forEach((el) => {
+      el.textContent = String(count);
+    });
+  }
+
+  function render(ids) {
+    paintButtons(ids);
+    paintCount(ids.length);
+  }
+
+  function postAjax(action, extra) {
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('nonce', window.rbAjax?.nonce ?? '');
+    Object.entries(extra || {}).forEach(([key, value]) => formData.append(key, value));
+
+    return fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
+      method: 'POST',
+      body: formData,
+    }).then((res) => res.json());
+  }
+
+  const config = window.FiveAmWishlist || { isLoggedIn: false, items: [] };
+  let currentIds = config.isLoggedIn ? (config.items || []).map(Number) : getGuestIds();
+
+  render(currentIds);
+
+  // Fusión única al detectar sesión iniciada con datos pendientes de invitado.
+  if (config.isLoggedIn && getGuestIds().length) {
+    postAjax('rb_merge_wishlist', { ids: getGuestIds() })
+      .then((data) => {
+        if (data.success && Array.isArray(data.data?.items)) {
+          currentIds = data.data.items.map(Number);
+          setGuestIds([]);
+          render(currentIds);
+        }
+      })
+      .catch(() => {});
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-wishlist-toggle]');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (btn.dataset.toggling === 'true') return;
+    btn.dataset.toggling = 'true';
+
+    const productId = Number(btn.dataset.wishlistToggle);
+    const wasActive = currentIds.includes(productId);
+
+    // Actualización optimista: refleja el cambio antes de que responda el servidor.
+    currentIds = wasActive
+      ? currentIds.filter((id) => id !== productId)
+      : [...currentIds, productId];
+    render(currentIds);
+
+    if (!config.isLoggedIn) {
+      setGuestIds(currentIds);
+      btn.dataset.toggling = 'false';
+      return;
+    }
+
+    postAjax('rb_toggle_wishlist', { product_id: productId })
+      .then((data) => {
+        if (!data.success) {
+          // Revertir si el servidor rechazó el cambio (p. ej. nonce vencido).
+          currentIds = wasActive
+            ? [...currentIds, productId]
+            : currentIds.filter((id) => id !== productId);
+          render(currentIds);
+        }
+      })
+      .catch(() => {
+        currentIds = wasActive
+          ? [...currentIds, productId]
+          : currentIds.filter((id) => id !== productId);
+        render(currentIds);
+      })
+      .finally(() => {
+        btn.dataset.toggling = 'false';
+      });
+  }, true);
+})();
+

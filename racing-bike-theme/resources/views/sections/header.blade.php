@@ -47,6 +47,18 @@
           <x-icon name="user" class="size-5" />
         </a>
 
+        <a
+          href="{{ function_exists('wc_get_account_endpoint_url') ? wc_get_account_endpoint_url('wishlist') : wc_get_page_permalink('myaccount') }}"
+          class="relative hidden md:block"
+          aria-label="{{ __('Ver mi lista de deseos', 'sage') }}"
+        >
+          <x-icon name="heart" class="size-5" />
+          <span
+            class="absolute -right-2 -top-2 flex size-4 items-center justify-center bg-action text-[10px] font-semibold text-on-action"
+            data-wishlist-count
+          >0</span>
+        </a>
+
         <button type="button" class="relative" data-cart-open aria-label="{{ __('Ver carrito', 'sage') }}">
           <x-icon name="cart" class="size-5" />
           <span
