@@ -61,7 +61,7 @@
           <span>{{ __('Filtrar', 'sage') }}</span>
         </button>
 
-        <p class="text-xs uppercase tracking-widest text-ink-subtle">
+        <p class="text-xs uppercase tracking-widest text-ink-subtle" aria-live="polite">
           {{ $total ? sprintf(_n('%s producto', '%s productos', $total, 'sage'), number_format_i18n($total)) : __('Sin resultados', 'sage') }}
         </p>
       </div>

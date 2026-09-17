@@ -71,8 +71,14 @@
       $selectedValues = isset($_GET[$paramKey]) ? explode(',', $_GET[$paramKey]) : [];
     @endphp
 
-    <div class="space-y-3">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-ink">{{ $label }}</h3>
+    {{--
+      <fieldset> en vez de un <div> + <h3>: cada grupo de filtro es
+      semánticamente un conjunto de casillas relacionadas, y sin agrupar
+      un lector de pantalla anunciaba una lista plana de enlaces sin decir
+      a qué pertenecía cada uno.
+    --}}
+    <fieldset class="space-y-3 border-0 p-0 m-0">
+      <legend class="text-xs font-bold uppercase tracking-wider text-ink p-0">{{ $label }}</legend>
 
       @if ($taxonomy === 'pa_marca')
         {{-- Cuadrícula visual de logotipos de marcas --}}
@@ -109,6 +115,8 @@
 
             <a
               href="{{ $filterUrl }}"
+              role="checkbox"
+              aria-checked="{{ $isChecked ? 'true' : 'false' }}"
               class="relative flex aspect-video items-center justify-center rounded-xl border px-2 py-1 transition-all {{ $isChecked ? 'border-emerald-400 bg-surface-raised/40 ring-1 ring-emerald-400/30' : 'border-line hover:border-white/20 bg-surface/20' }}"
               title="{{ $term->name }} ({{ $term->count }})"
             >
@@ -163,6 +171,8 @@
 
             <a
               href="{{ $filterUrl }}"
+              role="checkbox"
+              aria-checked="{{ $isChecked ? 'true' : 'false' }}"
               class="flex items-center justify-between text-xs transition-colors {{ $isChecked ? 'font-bold text-ink' : 'text-ink-muted hover:text-ink' }}"
             >
               <span class="flex items-center gap-2">
@@ -180,6 +190,6 @@
           @endforeach
         </div>
       @endif
-    </div>
+    </fieldset>
   @endforeach
 </div>
