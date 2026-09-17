@@ -66,9 +66,20 @@
       // visible para quien compra.
       $terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => true]);
       if (is_wp_error($terms) || empty($terms)) continue;
+
+      if ($taxonomy === 'pa_talla') {
+        $terms = \App\rb_sort_size_terms($terms);
+      }
+
       $paramKey = 'filter_' . str_replace('pa_', '', $taxonomy);
       $queryTypeKey = 'query_type_' . str_replace('pa_', '', $taxonomy);
       $selectedValues = isset($_GET[$paramKey]) ? explode(',', $_GET[$paramKey]) : [];
+
+      // Conteo contextual: cuántos productos del resultado ACTUAL tendría
+      // cada término si se marcara, no el conteo global de todo el
+      // catálogo (ver app/catalog-filters.php — $term->count es global y
+      // llevaba a marcar opciones que vaciaban la tienda).
+      $termCounts = \App\rb_layered_nav_term_counts($taxonomy);
     @endphp
 
     {{--
@@ -86,6 +97,13 @@
           @foreach ($terms as $term)
             @php
               $isChecked = in_array($term->slug, $selectedValues);
+              $count = $termCounts[$term->slug] ?? 0;
+              // Deshabilitada (no oculta) si marcarla dejaría la tienda
+              // vacía: oculta, el visitante no entiende por qué la opción
+              // desapareció; deshabilitada y visible, entiende que existe
+              // pero no combina con lo que ya tiene marcado.
+              $isDisabled = ! $isChecked && $count === 0;
+
               $newValues = $isChecked
                 ? array_diff($selectedValues, [$term->slug])
                 : array_merge($selectedValues, [$term->slug]);
@@ -114,11 +132,12 @@
             @endphp
 
             <a
-              href="{{ $filterUrl }}"
+              @if (! $isDisabled) href="{{ $filterUrl }}" @endif
               role="checkbox"
               aria-checked="{{ $isChecked ? 'true' : 'false' }}"
-              class="relative flex aspect-video items-center justify-center rounded-xl border px-2 py-1 transition-all {{ $isChecked ? 'border-emerald-400 bg-surface-raised/40 ring-1 ring-emerald-400/30' : 'border-line hover:border-white/20 bg-surface/20' }}"
-              title="{{ $term->name }} ({{ $term->count }})"
+              @if ($isDisabled) aria-disabled="true" @endif
+              class="relative flex aspect-video items-center justify-center rounded-xl border px-2 py-1 transition-all {{ $isChecked ? 'border-emerald-400 bg-surface-raised/40 ring-1 ring-emerald-400/30' : 'border-line hover:border-white/20 bg-surface/20' }} {{ $isDisabled ? 'opacity-30 pointer-events-none cursor-not-allowed' : '' }}"
+              title="{{ $term->name }} ({{ $count }})"
             >
               @if ($logoUrl)
                 <img
@@ -146,6 +165,9 @@
           @foreach ($terms as $term)
             @php
               $isChecked = in_array($term->slug, $selectedValues);
+              $count = $termCounts[$term->slug] ?? 0;
+              $isDisabled = ! $isChecked && $count === 0;
+
               $newValues = $isChecked
                 ? array_diff($selectedValues, [$term->slug])
                 : array_merge($selectedValues, [$term->slug]);
@@ -170,10 +192,11 @@
             @endphp
 
             <a
-              href="{{ $filterUrl }}"
+              @if (! $isDisabled) href="{{ $filterUrl }}" @endif
               role="checkbox"
               aria-checked="{{ $isChecked ? 'true' : 'false' }}"
-              class="flex items-center justify-between text-xs transition-colors {{ $isChecked ? 'font-bold text-ink' : 'text-ink-muted hover:text-ink' }}"
+              @if ($isDisabled) aria-disabled="true" @endif
+              class="flex items-center justify-between text-xs transition-colors {{ $isChecked ? 'font-bold text-ink' : 'text-ink-muted hover:text-ink' }} {{ $isDisabled ? 'opacity-30 pointer-events-none cursor-not-allowed' : '' }}"
             >
               <span class="flex items-center gap-2">
                 <span class="size-3.5 rounded border flex items-center justify-center transition-colors {{ $isChecked ? 'border-ink bg-ink text-surface' : 'border-line-strong bg-surface' }}">
@@ -185,7 +208,7 @@
                 </span>
                 <span>{{ $term->name }}</span>
               </span>
-              <span class="text-[10px] text-ink-subtle">({{ $term->count }})</span>
+              <span class="text-[10px] text-ink-subtle">({{ $count }})</span>
             </a>
           @endforeach
         </div>
