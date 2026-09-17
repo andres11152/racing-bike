@@ -18,6 +18,7 @@
   $breadcrumbs[] = ['label' => wp_strip_all_tags(woocommerce_page_title(false))];
 
   $total = (int) wc_get_loop_prop('total');
+  $activeFilterChips = \App\rb_active_filter_chips(\App\rb_filter_taxonomies());
 @endphp
 
 @section('content')
@@ -76,6 +77,25 @@
         </div>
       @endif
     </div>
+
+    {{--
+      Chips de filtros activos: antes la única forma de quitar UN filtro
+      era volver a abrir el sidebar (o el drawer completo en móvil) y
+      desmarcarlo ahí, o usar "Limpiar todo" y perder también los demás.
+    --}}
+    @if (! empty($activeFilterChips))
+      <div class="flex flex-wrap items-center gap-2 -mt-4 mb-8">
+        @foreach ($activeFilterChips as $chip)
+          <a
+            href="{{ $chip['url'] }}"
+            class="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 py-1 text-[11px] font-medium text-ink hover:border-ink transition-colors"
+          >
+            {{ $chip['label'] }}
+            <x-icon name="close" class="size-3" />
+          </a>
+        @endforeach
+      </div>
+    @endif
 
     <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
       {{-- Sidebar de filtros en Escritorio --}}
