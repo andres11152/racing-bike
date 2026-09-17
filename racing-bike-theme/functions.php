@@ -52,7 +52,7 @@ Application::configure()
 |
 */
 
-collect(['contact', 'contact-form', 'product-brands', 'setup', 'seo', 'filters', 'pwa'])
+collect(['contact', 'contact-form', 'product-brands', 'setup', 'seo', 'filters', 'catalog-filters', 'pwa'])
     ->each(function ($file) {
         if (! locate_template($file = "app/{$file}.php", true, true)) {
             wp_die(

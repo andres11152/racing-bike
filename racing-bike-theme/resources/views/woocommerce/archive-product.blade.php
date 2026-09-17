@@ -40,24 +40,33 @@
       @endif
     </header>
 
-    @if (woocommerce_product_loop() && $total)
-      {{-- Barra de herramientas --}}
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 md:py-6 border-b border-line mb-8">
-        <div class="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded border border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink lg:hidden hover:bg-surface transition-colors"
-            data-filter-open
-          >
-            <x-icon name="menu" class="size-4" />
-            <span>{{ __('Filtrar', 'sage') }}</span>
-          </button>
+    {{--
+      La barra de herramientas y el sidebar de filtros vivían dentro de
+      este @if: en cuanto un filtro devolvía 0 productos (algo frecuente,
+      ver los bugs de filter-sidebar.blade.php), ambos desaparecían junto
+      con el botón "Filtrar" de móvil. El usuario quedaba en un callejón
+      sin salida — sin forma de ver qué había marcado ni de quitar un solo
+      filtro, solo "Ver todo el catálogo" que los borra todos de un golpe.
+      Ahora la barra y el sidebar siempre se muestran; solo la rejilla de
+      productos cambia por el mensaje de "sin resultados".
+    --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 md:py-6 border-b border-line mb-8">
+      <div class="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded border border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink lg:hidden hover:bg-surface transition-colors"
+          data-filter-open
+        >
+          <x-icon name="menu" class="size-4" />
+          <span>{{ __('Filtrar', 'sage') }}</span>
+        </button>
 
-          <p class="text-xs uppercase tracking-widest text-ink-subtle">
-            {{ sprintf(_n('%s producto', '%s productos', $total, 'sage'), number_format_i18n($total)) }}
-          </p>
-        </div>
+        <p class="text-xs uppercase tracking-widest text-ink-subtle" aria-live="polite">
+          {{ $total ? sprintf(_n('%s producto', '%s productos', $total, 'sage'), number_format_i18n($total)) : __('Sin resultados', 'sage') }}
+        </p>
+      </div>
 
+      @if ($total)
         <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
           <div class="rb-woo-ordering flex-1 sm:flex-initial">
             @php(woocommerce_catalog_ordering())
@@ -65,16 +74,18 @@
 
           <x-catalog-view-switcher />
         </div>
-      </div>
+      @endif
+    </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
-        {{-- Sidebar de filtros en Escritorio --}}
-        <aside class="hidden lg:block sticky top-24">
-          <x-filter-sidebar />
-        </aside>
+    <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
+      {{-- Sidebar de filtros en Escritorio --}}
+      <aside class="hidden lg:block sticky top-24">
+        <x-filter-sidebar />
+      </aside>
 
-        {{-- Rejilla de productos --}}
-        <div>
+      {{-- Rejilla de productos --}}
+      <div>
+        @if (woocommerce_product_loop() && $total)
           <div
             id="catalog-grid-container"
             class="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:gap-x-8 transition-all duration-300"
@@ -88,19 +99,19 @@
           <div class="rb-woo-pagination mt-14">
             @php(do_action('woocommerce_after_shop_loop'))
           </div>
-        </div>
-      </div>
-    @else
-      <div class="py-20 text-center">
-        <p class="text-sm text-ink-muted">
-          {{ __('No encontramos productos que coincidan con tus filtros.', 'sage') }}
-        </p>
+        @else
+          <div class="py-20 text-center">
+            <p class="text-sm text-ink-muted">
+              {{ __('No encontramos productos que coincidan con tus filtros.', 'sage') }}
+            </p>
 
-        <x-button variant="secondary" size="md" :href="get_permalink(wc_get_page_id('shop'))" class="mt-6">
-          {{ __('Ver todo el catálogo', 'sage') }}
-        </x-button>
+            <x-button variant="secondary" size="md" :href="get_permalink(wc_get_page_id('shop'))" class="mt-6">
+              {{ __('Ver todo el catálogo', 'sage') }}
+            </x-button>
+          </div>
+        @endif
       </div>
-    @endif
+    </div>
   </div>
 
   {{-- Drawer de filtros para móvil --}}

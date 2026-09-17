@@ -23,7 +23,12 @@
     $name = $product->get_name();
     $href = $product->get_permalink();
     $imageId = $product->get_image_id();
-    $image = $imageId ? wp_get_attachment_image_url($imageId, 'full') : null;
+    // 'medium_large' (~768px) alcanza de sobra para una tarjeta que se
+    // pinta a ~300-400px en la rejilla; pedir 'full' aquí forzaba a
+    // servir fotos de hasta 1443px (700 KB) donde WooCommerce ya registra
+    // un tamaño intermedio sin usar. El <img> abajo suma un srcset real
+    // sobre este mismo tamaño para pantallas de alta densidad.
+    $image = $imageId ? (wp_get_attachment_image_url($imageId, 'medium_large') ?: wp_get_attachment_image_url($imageId, 'full')) : null;
     $imageAlt = $imageId ? get_post_meta($imageId, '_wp_attachment_image_alt', true) : '';
     $inStock = $product->is_in_stock();
     $ratingCount = $product->get_rating_count() ?: null;
@@ -38,6 +43,13 @@
       $sale = $product->get_variation_sale_price('min');
       $salePrice = ($sale && $sale !== $regularPrice) ? $sale : null;
     }
+
+    // Porcentaje de descuento para la etiqueta "Oferta": la etiqueta sola
+    // no dice nada del ahorro real, y ese número es lo que mueve la
+    // decisión de clic en una rejilla de catálogo.
+    $discountPercent = ($salePrice && $regularPrice && (float) $regularPrice > 0)
+      ? (int) round((((float) $regularPrice - (float) $salePrice) / (float) $regularPrice) * 100)
+      : null;
 
     if (! $badge) {
       $badge = $product->is_on_sale() ? 'sale' : null;
@@ -127,7 +139,7 @@
         }
 
         $imageId = $ownImageId;
-        $image = wp_get_attachment_image_url($imageId, 'full');
+        $image = wp_get_attachment_image_url($imageId, 'medium_large') ?: wp_get_attachment_image_url($imageId, 'full');
         $imageAlt = get_post_meta($imageId, '_wp_attachment_image_alt', true) ?: $name;
         break;
       }
@@ -140,15 +152,17 @@
 
     if ($imageId) {
       $galleryImages[] = [
-        'url' => wp_get_attachment_image_url($imageId, 'full'),
+        'id' => $imageId,
+        'url' => wp_get_attachment_image_url($imageId, 'medium_large') ?: wp_get_attachment_image_url($imageId, 'full'),
         'alt' => get_post_meta($imageId, '_wp_attachment_image_alt', true) ?: $name,
       ];
     }
 
     foreach ($galleryImageIds as $gId) {
-      $gUrl = wp_get_attachment_image_url($gId, 'full');
+      $gUrl = wp_get_attachment_image_url($gId, 'medium_large') ?: wp_get_attachment_image_url($gId, 'full');
       if ($gUrl && count($galleryImages) < 5) {
         $galleryImages[] = [
+          'id' => $gId,
           'url' => $gUrl,
           'alt' => get_post_meta($gId, '_wp_attachment_image_alt', true) ?: $name,
         ];
@@ -162,6 +176,9 @@
     $excerpt = null;
     $galleryImages = $image ? [['url' => $image, 'alt' => $imageAlt]] : [];
     $brandLogoUrl = null;
+    $discountPercent = ($salePrice && $regularPrice && (float) $regularPrice > 0)
+      ? (int) round((((float) $regularPrice - (float) $salePrice) / (float) $regularPrice) * 100)
+      : null;
   }
 @endphp
 
@@ -185,6 +202,10 @@
         @foreach ($galleryImages as $index => $img)
           <img
             src="{{ $img['url'] }}"
+            @if (! empty($img['id']))
+              srcset="{{ wp_get_attachment_image_srcset($img['id'], 'medium_large') ?: '' }}"
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+            @endif
             alt="{{ $img['alt'] }}"
             loading="lazy"
             decoding="async"
@@ -245,7 +266,7 @@
         @if ($badge === 'new')
           <x-badge variant="default">{{ __('Nuevo', 'sage') }}</x-badge>
         @elseif ($badge === 'sale')
-          <x-badge variant="sale">{{ __('Oferta', 'sage') }}</x-badge>
+          <x-badge variant="sale">{{ $discountPercent ? sprintf('-%d%%', $discountPercent) : __('Oferta', 'sage') }}</x-badge>
         @endif
 
         @if (! $inStock)
