@@ -620,6 +620,35 @@ window.rbInitCarousel = initCarousel;
  | que no se sustituye: se oculta y se conduce desde los botones. Si este script
  | no corre, `.no-js` deja el select visible y la ficha sigue siendo comprable.
  * ---------------------------------------------------------------------- */
+const SIZE_ORDER_MAP = {
+  '3xs': 0, 'xxs': 1, '2xs': 1, 'xs': 2,
+  's': 3, 's-m': 4, 'sm': 4, 'm': 5,
+  'ml': 6, 'm-l': 6, 'l': 7, 'l-xl': 8, 'lxl': 8,
+  'xl': 9, 'xxl': 10, '2xl': 10, 'xxxl': 11, '3xl': 11,
+  '4xl': 12, 'u': 90, 'tu': 90, 'unica': 90, 'one-size': 90,
+};
+
+function getRbSizeRank(val) {
+  const str = String(val || '').trim().toLowerCase().replace(/[\s_/]+/g, '-');
+  if (!str) return [2, 0, ''];
+  const num = parseFloat(str);
+  if (!Number.isNaN(num) && /^\d+(\.\d+)?/.test(str)) {
+    return [0, num, str];
+  }
+  if (Object.prototype.hasOwnProperty.call(SIZE_ORDER_MAP, str)) {
+    return [1, SIZE_ORDER_MAP[str], str];
+  }
+  return [2, 0, str];
+}
+
+function compareRbSizeValues(a, b) {
+  const [typeA, valA, strA] = getRbSizeRank(a);
+  const [typeB, valB, strB] = getRbSizeRank(b);
+  if (typeA !== typeB) return typeA - typeB;
+  if (valA !== valB) return valA - valB;
+  return strA.localeCompare(strB);
+}
+
 window.initSwatches = function() {
   document.querySelectorAll('.variations_form').forEach((form) => {
     const priceContainer = form.closest('.grid')?.querySelector('.rb-woo-price') || document.querySelector('.rb-woo-price');
@@ -648,6 +677,12 @@ window.initSwatches = function() {
       list.setAttribute('aria-label', baseLabelText || 'Opciones');
 
       const options = [...select.options].filter((option) => option.value !== '');
+
+      // Mostrar siempre las tallas ordenadas de menor a mayor (XXS -> XXL, 13 -> 19)
+      if (/talla|size/i.test(attributeName)) {
+        options.sort((a, b) => compareRbSizeValues(a.value || a.textContent, b.value || b.textContent));
+        options.forEach((opt) => select.appendChild(opt));
+      }
 
       options.forEach((option) => {
         const button = document.createElement('button');

@@ -97,6 +97,10 @@
             ];
           }
         }
+
+        if (! empty($sizes) && function_exists('\\App\\rb_compare_sizes')) {
+          usort($sizes, '\\App\\rb_compare_sizes');
+        }
       }
     }
 

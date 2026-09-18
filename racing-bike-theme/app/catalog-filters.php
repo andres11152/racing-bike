@@ -186,30 +186,91 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
  * final) — sin tocar el orden real en la base de datos, que puede seguir
  * usando otras vistas.
  */
+function rb_size_rank(mixed $val): array
+{
+    if (is_object($val) && isset($val->slug)) {
+        $str = $val->slug;
+    } elseif (is_array($val) && isset($val['label'])) {
+        $str = $val['label'];
+    } elseif (is_array($val) && isset($val['slug'])) {
+        $str = $val['slug'];
+    } else {
+        $str = (string) $val;
+    }
+
+    $slug = strtolower(trim($str));
+    $slug = str_replace([' ', '_', '/'], '-', $slug);
+
+    if (is_numeric($slug)) {
+        return [0, (float) $slug, $slug];
+    }
+
+    if (preg_match('/^(\d+(?:\.\d+)?)/', $slug, $matches)) {
+        return [0, (float) $matches[1], $slug];
+    }
+
+    static $letterOrder = [
+        '3xs' => 0,
+        'xxs' => 1,
+        '2xs' => 1,
+        'xs' => 2,
+        's' => 3,
+        's-m' => 4,
+        'sm' => 4,
+        'm' => 5,
+        'ml' => 6,
+        'm-l' => 6,
+        'l' => 7,
+        'l-xl' => 8,
+        'lxl' => 8,
+        'xl' => 9,
+        'xxl' => 10,
+        '2xl' => 10,
+        'xxxl' => 11,
+        '3xl' => 11,
+        '4xl' => 12,
+        'u' => 90,
+        'tu' => 90,
+        'unica' => 90,
+        'one-size' => 90,
+    ];
+
+    if (isset($letterOrder[$slug])) {
+        return [1, $letterOrder[$slug], $slug];
+    }
+
+    return [2, 0, $slug];
+}
+
+function rb_compare_sizes(mixed $a, mixed $b): int
+{
+    return rb_size_rank($a) <=> rb_size_rank($b);
+}
+
 function rb_sort_size_terms(array $terms): array
 {
-    $letterOrder = ['xxs' => 0, 'xs' => 1, 's' => 2, 'm' => 3, 'ml' => 4, 'l' => 5, 'xl' => 6, 'xxl' => 7];
-
-    usort($terms, function (\WP_Term $a, \WP_Term $b) use ($letterOrder) {
-        $rank = static function (\WP_Term $term) use ($letterOrder) {
-            $slug = strtolower($term->slug);
-
-            if (is_numeric($slug)) {
-                return [0, (float) $slug, $slug];
-            }
-
-            if (isset($letterOrder[$slug])) {
-                return [1, $letterOrder[$slug], $slug];
-            }
-
-            return [2, 0, $slug];
-        };
-
-        return $rank($a) <=> $rank($b);
-    });
-
+    usort($terms, __NAMESPACE__ . '\\rb_compare_sizes');
     return $terms;
 }
+
+/**
+ * En la ficha de producto (PDP) y donde se obtengan los términos de variación,
+ * garantiza que las tallas se listen de la más pequeña a la más grande (ej: S, M, L, XL).
+ */
+add_filter('woocommerce_get_product_terms', function ($terms, $product_id, $taxonomy, $args) {
+    if (is_array($terms) && (stripos($taxonomy, 'talla') !== false || stripos($taxonomy, 'size') !== false)) {
+        usort($terms, __NAMESPACE__ . '\\rb_compare_sizes');
+    }
+    return $terms;
+}, 10, 4);
+
+add_filter('woocommerce_dropdown_variation_attribute_options_args', function ($args) {
+    $attr = $args['attribute'] ?? '';
+    if ((stripos($attr, 'talla') !== false || stripos($attr, 'size') !== false) && ! empty($args['options']) && is_array($args['options'])) {
+        usort($args['options'], __NAMESPACE__ . '\\rb_compare_sizes');
+    }
+    return $args;
+}, 10, 1);
 
 /**
  * Precios reales de todos los productos del contexto actual (categoría/
