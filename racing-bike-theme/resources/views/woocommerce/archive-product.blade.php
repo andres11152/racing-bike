@@ -51,7 +51,7 @@
       Ahora la barra y el sidebar siempre se muestran; solo la rejilla de
       productos cambia por el mensaje de "sin resultados".
     --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 md:py-6 border-b border-line mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 md:py-6 border-b border-line mb-8" data-catalog-toolbar>
       <div class="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
         <button
           type="button"
@@ -62,44 +62,55 @@
           <span>{{ __('Filtrar', 'sage') }}</span>
         </button>
 
-        <p class="text-xs uppercase tracking-widest text-ink-subtle" aria-live="polite">
+        <p class="text-xs uppercase tracking-widest text-ink-subtle" data-catalog-count tabindex="-1" aria-live="polite">
           {{ $total ? sprintf(_n('%s producto', '%s productos', $total, 'sage'), number_format_i18n($total)) : __('Sin resultados', 'sage') }}
         </p>
       </div>
 
-      @if ($total)
-        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+      {{--
+        Siempre se renderiza este contenedor, incluso vacío con $total=0:
+        el filtro AJAX (ver initCatalogAjaxFilters en app.js) necesita un
+        nodo estable que encontrar y reemplazar en cada respuesta — que
+        aparezca o no según $total no puede depender de si existe en el
+        HTML previo.
+      --}}
+      <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto" data-catalog-toolbar-actions>
+        @if ($total)
           <div class="rb-woo-ordering flex-1 sm:flex-initial">
             @php(woocommerce_catalog_ordering())
           </div>
 
           <x-catalog-view-switcher />
-        </div>
-      @endif
+        @endif
+      </div>
     </div>
 
     {{--
       Chips de filtros activos: antes la única forma de quitar UN filtro
       era volver a abrir el sidebar (o el drawer completo en móvil) y
-      desmarcarlo ahí, o usar "Limpiar todo" y perder también los demás.
+      desmarcarlo ahí, o usar "Limpiar todo" y perder también las demás.
+      El wrapper exterior siempre se renderiza (vacío si no hay chips),
+      mismo motivo que arriba: un nodo estable para el AJAX.
     --}}
-    @if (! empty($activeFilterChips))
-      <div class="flex flex-wrap items-center gap-2 -mt-4 mb-8">
-        @foreach ($activeFilterChips as $chip)
-          <a
-            href="{{ $chip['url'] }}"
-            class="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 py-1 text-[11px] font-medium text-ink hover:border-ink transition-colors"
-          >
-            {{ $chip['label'] }}
-            <x-icon name="close" class="size-3" />
-          </a>
-        @endforeach
-      </div>
-    @endif
+    <div data-catalog-chips>
+      @if (! empty($activeFilterChips))
+        <div class="flex flex-wrap items-center gap-2 -mt-4 mb-8">
+          @foreach ($activeFilterChips as $chip)
+            <a
+              href="{{ $chip['url'] }}"
+              class="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 py-1 text-[11px] font-medium text-ink hover:border-ink transition-colors"
+            >
+              {{ $chip['label'] }}
+              <x-icon name="close" class="size-3" />
+            </a>
+          @endforeach
+        </div>
+      @endif
+    </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
       {{-- Sidebar de filtros en Escritorio --}}
-      <aside class="hidden lg:block sticky top-24">
+      <aside class="hidden lg:block sticky top-24" id="catalog-sidebar-desktop">
         <x-filter-sidebar />
       </aside>
 
@@ -109,18 +120,15 @@
           <div
             id="catalog-grid-container"
             class="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:gap-x-8 transition-all duration-300"
+            aria-busy="false"
           >
             @while (have_posts())
               @php(the_post())
               <x-product-card :product="wc_get_product()" />
             @endwhile
           </div>
-
-          <div class="rb-woo-pagination mt-14">
-            @php(do_action('woocommerce_after_shop_loop'))
-          </div>
         @else
-          <div class="py-20 text-center">
+          <div id="catalog-grid-container" class="py-20 text-center" aria-busy="false">
             <p class="text-sm text-ink-muted">
               {{ __('No encontramos productos que coincidan con tus filtros.', 'sage') }}
             </p>
@@ -130,6 +138,19 @@
             </x-button>
           </div>
         @endif
+
+        {{--
+          Wrapper de paginación siempre presente (vacío si no hay
+          resultados): mismo motivo que los demás nodos "estables" de esta
+          vista — el AJAX necesita encontrarlo exista o no haya páginas.
+        --}}
+        <div id="catalog-pagination" class="mt-14">
+          @if ($total)
+            <div class="rb-woo-pagination">
+              @php(do_action('woocommerce_after_shop_loop'))
+            </div>
+          @endif
+        </div>
       </div>
     </div>
   </div>
@@ -146,50 +167,12 @@
         </button>
       </div>
 
-      <x-filter-sidebar :show-title="false" />
+      <div id="catalog-sidebar-mobile">
+        <x-filter-sidebar :show-title="false" />
+      </div>
     </div>
   </div>
 
 
   @php(do_action('woocommerce_after_main_content'))
-
-  {{-- Script de Alternancia de Vista (Cuadrícula vs Compacta vs Lista) --}}
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const container = document.getElementById('catalog-grid-container');
-      const switcher = document.querySelector('[data-catalog-view-switcher]');
-      if (!container || !switcher) return;
-
-      const gridBtn = switcher.querySelector('[data-view-btn="grid"]');
-      const compactBtn = switcher.querySelector('[data-view-btn="compact"]');
-
-      const setViewMode = (mode) => {
-        if (gridBtn) {
-          gridBtn.setAttribute('data-active', mode === 'grid' ? 'true' : 'false');
-          gridBtn.dataset.active = mode === 'grid' ? 'true' : 'false';
-        }
-        if (compactBtn) {
-          compactBtn.setAttribute('data-active', mode === 'compact' ? 'true' : 'false');
-          compactBtn.dataset.active = mode === 'compact' ? 'true' : 'false';
-        }
-
-        container.classList.remove('view-mode-grid', 'view-mode-compact', 'view-mode-list');
-        if (mode === 'compact') {
-          container.classList.add('view-mode-compact');
-        } else {
-          container.classList.add('view-mode-grid');
-        }
-        localStorage.setItem('rb_catalog_view_mode', mode);
-      };
-
-      // En mobile (< 768px), la 2da vista (compact) es la predeterminada obligatoria
-      const isMobile = window.innerWidth < 768;
-      const defaultMode = isMobile ? 'compact' : 'grid';
-      const savedMode = localStorage.getItem('rb_catalog_view_mode') || defaultMode;
-      setViewMode(savedMode);
-
-      if (gridBtn) gridBtn.addEventListener('click', () => setViewMode('grid'));
-      if (compactBtn) compactBtn.addEventListener('click', () => setViewMode('compact'));
-    });
-  </script>
 @endsection

@@ -518,30 +518,41 @@ window.rbInitCarousel = initCarousel;
     return item;
   };
 
-  // view_item_list: una vez por lista, cuando al menos una tarjeta entra en viewport.
-  const listGroups = new Map();
-  document.querySelectorAll('[data-ga4-item][data-ga4-list-id]').forEach((card) => {
-    const listId = card.dataset.ga4ListId;
-    if (!listGroups.has(listId)) listGroups.set(listId, []);
-    listGroups.get(listId).push(card);
-  });
+  // view_item_list: una vez por lista, cuando al menos una tarjeta entra en
+  // viewport. Extraído a función nombrada y expuesto en window: el catálogo
+  // reemplaza sus tarjetas por AJAX al filtrar (ver initCatalogAjaxFilters),
+  // y ese nuevo set de productos es una lista distinta que merece su propio
+  // view_item_list — de ahí que también se borre de seenLists antes.
+  const wireListImpressionObservers = (root = document) => {
+    const listGroups = new Map();
+    root.querySelectorAll('[data-ga4-item][data-ga4-list-id]').forEach((card) => {
+      const listId = card.dataset.ga4ListId;
+      if (!listGroups.has(listId)) listGroups.set(listId, []);
+      listGroups.get(listId).push(card);
+    });
 
-  listGroups.forEach((cards, listId) => {
-    const listObserver = new IntersectionObserver((entries) => {
-      if (seenLists.has(listId) || !entries.some((entry) => entry.isIntersecting)) return;
-      seenLists.add(listId);
+    listGroups.forEach((cards, listId) => {
+      seenLists.delete(listId);
 
-      window.rbTrack('view_item_list', {
-        item_list_id: listId,
-        item_list_name: cards[0].dataset.ga4ListName || listId,
-        items: cards.map(itemFromCard).filter(Boolean),
-      });
+      const listObserver = new IntersectionObserver((entries) => {
+        if (seenLists.has(listId) || !entries.some((entry) => entry.isIntersecting)) return;
+        seenLists.add(listId);
 
-      listObserver.disconnect();
-    }, { threshold: 0.3 });
+        window.rbTrack('view_item_list', {
+          item_list_id: listId,
+          item_list_name: cards[0].dataset.ga4ListName || listId,
+          items: cards.map(itemFromCard).filter(Boolean),
+        });
 
-    cards.forEach((card) => listObserver.observe(card));
-  });
+        listObserver.disconnect();
+      }, { threshold: 0.3 });
+
+      cards.forEach((card) => listObserver.observe(card));
+    });
+  };
+
+  wireListImpressionObservers();
+  window.rbInitGa4ListImpressions = wireListImpressionObservers;
 
   // select_item: click en cualquier parte de una tarjeta con datos de lista.
   document.addEventListener('click', (e) => {
@@ -2039,6 +2050,12 @@ if ('serviceWorker' in navigator) {
 
   render(currentIds);
 
+  // El catálogo reemplaza tarjetas de producto por AJAX al filtrar (ver
+  // initCatalogAjaxFilters): los botones de wishlist que llegan en esas
+  // tarjetas nuevas necesitan pintarse con el estado actual sin esperar a
+  // la próxima acción de wishlist.
+  window.rbRepaintWishlistButtons = () => paintButtons(currentIds);
+
   // Fusión única al detectar sesión iniciada con datos pendientes de invitado.
   if (config.isLoggedIn && getGuestIds().length) {
     postAjax('rb_merge_wishlist', { ids: getGuestIds() })
@@ -2099,3 +2116,206 @@ if ('serviceWorker' in navigator) {
   }, true);
 })();
 
+
+/* -------------------------------------------------------------------------
+ | Catálogo: alternancia de vista (cuadrícula / compacta) + filtros AJAX
+ |
+ | Vivía como un <script> inline en archive-product.blade.php; se mueve
+ | aquí porque initCatalogAjaxFilters (más abajo) reemplaza la barra de
+ | herramientas por AJAX y necesita poder re-ejecutar esta misma lógica
+ | contra los botones nuevos que llegan en cada respuesta.
+ * ---------------------------------------------------------------------- */
+
+function initCatalogViewSwitcher() {
+  const container = document.getElementById('catalog-grid-container');
+  const switcher = document.querySelector('[data-catalog-view-switcher]');
+  if (!container || !switcher) return;
+
+  const gridBtn = switcher.querySelector('[data-view-btn="grid"]');
+  const compactBtn = switcher.querySelector('[data-view-btn="compact"]');
+
+  const setViewMode = (mode) => {
+    if (gridBtn) {
+      gridBtn.setAttribute('data-active', mode === 'grid' ? 'true' : 'false');
+      gridBtn.dataset.active = mode === 'grid' ? 'true' : 'false';
+    }
+    if (compactBtn) {
+      compactBtn.setAttribute('data-active', mode === 'compact' ? 'true' : 'false');
+      compactBtn.dataset.active = mode === 'compact' ? 'true' : 'false';
+    }
+
+    container.classList.remove('view-mode-grid', 'view-mode-compact', 'view-mode-list');
+    container.classList.add(mode === 'compact' ? 'view-mode-compact' : 'view-mode-grid');
+    localStorage.setItem('rb_catalog_view_mode', mode);
+  };
+
+  // En mobile (< 768px), la 2da vista (compact) es la predeterminada obligatoria.
+  const isMobile = window.innerWidth < 768;
+  const defaultMode = isMobile ? 'compact' : 'grid';
+  const savedMode = localStorage.getItem('rb_catalog_view_mode') || defaultMode;
+  setViewMode(savedMode);
+
+  if (gridBtn) gridBtn.addEventListener('click', () => setViewMode('grid'));
+  if (compactBtn) compactBtn.addEventListener('click', () => setViewMode('compact'));
+}
+
+document.addEventListener('DOMContentLoaded', initCatalogViewSwitcher);
+
+/* -------------------------------------------------------------------------
+ | Catálogo: filtrado por AJAX
+ |
+ | Antes, marcar un filtro, quitar una chip o cambiar de página recargaba
+ | la página completa — en móvil eso significa perder la posición de
+ | scroll y ver un parpadeo en blanco por cada clic, y en el drawer de
+ | filtros significa que aplicar 3 filtros seguidos exige abrirlo 3 veces.
+ |
+ | No hay un endpoint nuevo en el servidor: se pide la MISMA página que un
+ | clic normal pediría (progressive enhancement — con JS desactivado, cada
+ | enlace sigue funcionando exactamente igual, como navegación normal) y
+ | del HTML que vuelve se toman solo los fragmentos que cambian, cada uno
+ | por su propio id/selector estable:
+ |
+ |   #catalog-grid-container      tarjetas de producto
+ |   #catalog-pagination          paginación
+ |   [data-catalog-count]         "N productos" (solo texto, nunca se
+ |                                 destruye el nodo — es la región aria-live)
+ |   [data-catalog-toolbar-actions]  orden + selector de vista
+ |   [data-catalog-chips]         chips de filtros activos
+ |   #catalog-sidebar-desktop     sidebar de escritorio
+ |   #catalog-sidebar-mobile      contenido del drawer de filtros (el
+ |                                 encabezado y el botón de cerrar del
+ |                                 drawer NO se tocan — conservan su
+ |                                 listener de apertura/cierre)
+ |
+ | Los enlaces de filtro/paginación/chips no llevan un listener propio:
+ | se detectan por delegación (¿el <a> que se clickeó está dentro de uno
+ | de esos contenedores?), así que un enlace que llega en una respuesta
+ | AJAX funciona igual que uno que vino en el HTML original, sin tener que
+ | re-enganchar nada.
+ * ---------------------------------------------------------------------- */
+
+function initCatalogAjaxFilters() {
+  const grid = document.getElementById('catalog-grid-container');
+  if (!grid) return; // no estamos en /tienda/ ni en una categoría de producto
+
+  const LINK_CONTAINERS = '#catalog-sidebar-desktop, #catalog-sidebar-mobile, [data-catalog-chips], #catalog-pagination';
+  const REGIONS = [
+    { selector: '#catalog-grid-container', mode: 'html' },
+    { selector: '#catalog-pagination', mode: 'html' },
+    { selector: '[data-catalog-toolbar-actions]', mode: 'html' },
+    { selector: '[data-catalog-chips]', mode: 'html' },
+    { selector: '#catalog-sidebar-desktop', mode: 'html' },
+    { selector: '#catalog-sidebar-mobile', mode: 'html' },
+    { selector: '[data-catalog-count]', mode: 'text' },
+  ];
+
+  let currentAbort = null;
+
+  const setBusy = (busy) => {
+    grid.setAttribute('aria-busy', String(busy));
+    grid.classList.toggle('opacity-50', busy);
+    grid.classList.toggle('pointer-events-none', busy);
+  };
+
+  const swapRegions = (doc) => {
+    REGIONS.forEach(({ selector, mode }) => {
+      const current = document.querySelector(selector);
+      const incoming = doc.querySelector(selector);
+      if (!current || !incoming) return;
+
+      if (mode === 'text') {
+        current.textContent = incoming.textContent;
+      } else {
+        current.innerHTML = incoming.innerHTML;
+      }
+    });
+  };
+
+  const navigate = (url, { push = true, moveFocus = true } = {}) => {
+    currentAbort?.abort();
+    currentAbort = new AbortController();
+
+    setBusy(true);
+
+    fetch(url, { signal: currentAbort.signal, headers: { 'X-Requested-With': 'rb-catalog-ajax' } })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        swapRegions(doc);
+
+        if (push) history.pushState({ rbCatalogUrl: url }, '', url);
+
+        // Los nodos de #catalog-grid-container y del selector de vista se
+        // acaban de recrear desde cero: sin esto, la vista compacta
+        // elegida por el visitante se pierde en cada filtro, y los
+        // botones nuevos del selector no tendrían su listener de clic.
+        initCatalogViewSwitcher();
+        window.rbInitGa4ListImpressions?.(grid);
+        window.rbRepaintWishlistButtons?.();
+
+        // Si el clic vino de dentro del drawer de filtros en móvil, el
+        // drawer se queda abierto (tocar 3 filtros seguidos ya no exige
+        // reabrirlo 3 veces) — y en ese caso NO se mueve el foco ni el
+        // scroll de la página de fondo, que sigue tapada por el overlay
+        // del drawer y el visitante ni la ve.
+        if (moveFocus) {
+          // Screen readers: mover el foco al contador (aria-live lo
+          // anuncia) en vez de dejarlo en el <body> — el enlace que se
+          // pulsó puede haber sido destruido por el propio swap.
+          document.querySelector('[data-catalog-count]')?.focus({ preventScroll: true });
+
+          const anchor = document.querySelector('[data-catalog-toolbar]') || grid;
+          anchor.scrollIntoView({
+            behavior: prefersReducedMotion.matches ? 'auto' : 'smooth',
+            block: 'start',
+          });
+        }
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        // Un filtro es una comodidad, no algo crítico: si el fetch falla
+        // (red, timeout), degradar a una navegación normal en vez de
+        // dejar al visitante con una rejilla congelada sin explicación.
+        window.location.href = url;
+      })
+      .finally(() => setBusy(false));
+  };
+
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; // abrir en pestaña nueva, etc.
+
+    const link = event.target.closest('a[href]');
+    if (!link || !link.closest(LINK_CONTAINERS)) return;
+    if (link.getAttribute('aria-disabled') === 'true') return;
+
+    const url = new URL(link.href, window.location.origin);
+    if (url.origin !== window.location.origin) return;
+
+    event.preventDefault();
+    navigate(url.toString(), { moveFocus: !link.closest('#catalog-sidebar-mobile') });
+  });
+
+  // Filtro de precio: el único control de la barra de filtros que es un
+  // <form> en vez de un <a>, así que se intercepta por separado.
+  document.addEventListener('submit', (event) => {
+    if (!event.target.matches('#catalog-sidebar-desktop form, #catalog-sidebar-mobile form')) return;
+
+    event.preventDefault();
+    const form = event.target;
+    const url = new URL(form.action, window.location.origin);
+    url.search = new URLSearchParams(new FormData(form)).toString();
+    navigate(url.toString(), { moveFocus: !form.closest('#catalog-sidebar-mobile') });
+  });
+
+  // Atrás/adelante del navegador: refrescar el contenido para que
+  // coincida con la URL a la que se volvió, sin volver a apilar historial.
+  window.addEventListener('popstate', () => {
+    navigate(window.location.href, { push: false });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initCatalogAjaxFilters);
