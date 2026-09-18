@@ -67,17 +67,30 @@ function initRbSizeCalculator() {
     // lo que el producto realmente vende — en un producto de 47 a 60 cm
     // seguía hablando de XXS-XL. Esto lee esas opciones reales para que el
     // resultado muestre y seleccione una talla que de verdad existe ahí.
+    //
+    // Un producto puede tener varios atributos con swatches a la vez (Talla
+    // Y Color, p.ej. "Casco RC" con L/M/S de talla y Blanco/Gris/Mate de
+    // color) — todos comparten la misma clase .rb-swatch sin distinción,
+    // así que sin filtrar por atributo esto también recogía los colores
+    // ("MATE" contiene la letra "M" y se colaba como si fuera talla M).
+    // initSwatches (app.js) marca cada swatch con su atributo real de
+    // WooCommerce en data-attribute; solo se usan los que sean de talla.
+    function isSizeAttributeName(name) {
+        const n = (name || '').toLowerCase();
+        return n.includes('talla') || n.includes('size');
+    }
+
     function getRealProductSizeOptions() {
-        const swatches = [...document.querySelectorAll('.rb-swatch')];
+        const swatches = [...document.querySelectorAll('.rb-swatch')].filter((s) => isSizeAttributeName(s.dataset.attribute));
         if (swatches.length) {
-            return { items: swatches, getText: (s) => s.textContent || '' };
+            return { kind: 'swatch', items: swatches, getText: (s) => s.textContent || '' };
         }
 
-        const selects = [...document.querySelectorAll('.variations select')];
+        const selects = [...document.querySelectorAll('.variations select')].filter((s) => isSizeAttributeName(s.name || s.id));
         for (const select of selects) {
             const options = [...select.options].filter((opt) => opt.value !== '');
             if (options.length) {
-                return { items: options, getText: (opt) => opt.textContent || opt.value };
+                return { kind: 'select', select, items: options, getText: (opt) => opt.textContent || opt.value };
             }
         }
 
@@ -332,37 +345,25 @@ function initRbSizeCalculator() {
         applyBtn.addEventListener('click', () => {
             closeModal();
 
-            // Buscar swatch: coincidencia numérica más cercana si el
-            // producto usa tallas por número (Trek/Orbea en ruta, algunas
-            // MTB), o por letra si no.
-            const swatches = [...document.querySelectorAll('.rb-swatch')];
-            const matchedSwatch = pickBestSizeOption(swatches, (s) => s.textContent || '');
+            // Mismo criterio que el resultado del modal: solo swatches/select
+            // del atributo de Talla, nunca de Color u otro atributo (ver
+            // getRealProductSizeOptions más arriba).
+            const pageOptions = getRealProductSizeOptions();
+            const matched = pageOptions ? pickBestSizeOption(pageOptions.items, pageOptions.getText) : null;
 
-            if (matchedSwatch) {
-                matchedSwatch.click();
+            if (matched && pageOptions.kind === 'swatch') {
+                matched.click();
+            } else if (matched && pageOptions.kind === 'select') {
+                pageOptions.select.value = matched.value;
+                pageOptions.select.dispatchEvent(new Event('change', { bubbles: true }));
             } else {
-                // WooCommerce standard select option fallback
-                const selects = document.querySelectorAll('.variations select');
-                let foundOption = false;
-                selects.forEach(select => {
-                    const options = [...select.options].filter((opt) => opt.value !== '');
-                    const option = pickBestSizeOption(options, (opt) => opt.textContent || opt.value);
-                    if (option) {
-                        select.value = option.value;
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                        foundOption = true;
-                    }
-                });
-
                 // If no product option found, redirect to shop with filter.
                 // El filtro real del catálogo es "filter_talla" (taxonomía
                 // pa_talla) — "filter_talla-cuadro" no tiene ningún producto
                 // asignado (pa_talla-cuadro quedó sin uso tras la migración
                 // de tallas a pa_talla) y nunca filtraba nada.
-                if (!foundOption) {
-                    const filterValue = currentSizeNumeric != null ? currentSizeNumeric : currentSizeLetter.toLowerCase();
-                    window.location.href = `/tienda/?filter_talla=${filterValue}`;
-                }
+                const filterValue = currentSizeNumeric != null ? currentSizeNumeric : currentSizeLetter.toLowerCase();
+                window.location.href = `/tienda/?filter_talla=${filterValue}`;
             }
         });
     }

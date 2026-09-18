@@ -635,8 +635,15 @@ window.initSwatches = function() {
       const baseLabelText = labelEl ? (labelEl.dataset.baseText || labelEl.textContent.trim().replace(/:.*/, '')) : 'Talla del marco';
       if (labelEl && !labelEl.dataset.baseText) labelEl.dataset.baseText = baseLabelText;
 
+      // WooCommerce nombra el select "attribute_pa_talla", "attribute_pa_color",
+      // etc. — se guarda ese nombre en el propio swatch para que otro script
+      // (la calculadora de talla) pueda distinguir "L" de talla de "Lila" de
+      // color en vez de leer TODOS los .rb-swatch de la página sin filtrar.
+      const attributeName = (select.name || select.id || '').replace(/^attribute_/, '');
+
       const list = document.createElement('div');
       list.className = 'rb-swatches';
+      list.dataset.attribute = attributeName;
       list.setAttribute('role', 'group');
       list.setAttribute('aria-label', baseLabelText || 'Opciones');
 
@@ -648,6 +655,7 @@ window.initSwatches = function() {
         button.className = 'rb-swatch';
         button.textContent = option.textContent;
         button.dataset.value = option.value;
+        button.dataset.attribute = attributeName;
         button.dataset.selected = String(select.value === option.value);
 
         button.addEventListener('click', () => {
@@ -1923,11 +1931,24 @@ document.addEventListener('click', (e) => {
     }) || null;
   }
 
+  // Un producto puede tener varios atributos con swatches (Talla Y Color,
+  // p.ej. "Casco RC" con pa_talla L/M/S y pa_color Blanco/Gris/Mate) — los
+  // botones .rb-swatch de TODOS los atributos se veían idénticos y sin
+  // forma de distinguirlos, así que la calculadora de talla terminaba
+  // comparando también contra colores ("MATE" contiene la letra "M" y
+  // coincidía como si fuera la talla M). initSwatches ahora marca cada
+  // swatch con el atributo real de WooCommerce del que viene
+  // (button.dataset.attribute); esto filtra por ahí antes de comparar.
+  function isSizeAttributeName(name) {
+    const n = (name || '').toLowerCase();
+    return n.includes('talla') || n.includes('size');
+  }
+
   function autoSelectSize(sizeLetter, sizeNumeric) {
     if (!sizeLetter) return;
 
     // 1. Buscar en Swatches / Botones visuales si existen
-    const swatches = [...document.querySelectorAll('.rb-swatch')];
+    const swatches = [...document.querySelectorAll('.rb-swatch')].filter((s) => isSizeAttributeName(s.dataset.attribute));
     const matchedSwatch = pickBestSizeOption(swatches, (s) => s.textContent || '', sizeLetter, sizeNumeric);
 
     if (matchedSwatch) {
@@ -1936,7 +1957,7 @@ document.addEventListener('click', (e) => {
       }
     } else {
       // 2. Fallback: Selector estándar de WooCommerce
-      const selects = document.querySelectorAll('.variations select');
+      const selects = [...document.querySelectorAll('.variations select')].filter((s) => isSizeAttributeName(s.name || s.id));
       selects.forEach(select => {
         const options = [...select.options].filter((opt) => opt.value !== '');
         const option = pickBestSizeOption(options, (opt) => opt.textContent || opt.value, sizeLetter, sizeNumeric);
