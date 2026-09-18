@@ -71,9 +71,21 @@ function rb_filter_taxonomies(): array
  * WooCommerce). El propio término evaluado no arrastra la selección
  * previa de su misma taxonomía: la pregunta que responde cada número es
  * "¿cuántos productos vería si marco (también) esta opción?".
+ *
+ * Corregido el 2026-09-17 (auditoría en vivo tras quitar el modo
+ * mantenimiento): la primera versión hacía una WP_Query POR TÉRMINO
+ * (~46 consultas repartidas en las 3 taxonomías del sidebar), y cada una
+ * se volvía más pesada con cada filtro activo — medido en producción,
+ * filtrar por 2 atributos a la vez tardaba 6-7 segundos. Ahora son 2
+ * consultas por taxonomía en total: una para resolver el contexto actual
+ * a una lista de IDs de producto (igual de compleja que antes, pero UNA
+ * sola vez), y una segunda que cuenta por término con un solo GROUP BY
+ * sobre esa lista, en vez de repetir la primera 8-29 veces.
  */
 function rb_layered_nav_term_counts(string $renderingTaxonomy): array
 {
+    global $wpdb;
+
     static $cache = [];
 
     if (array_key_exists($renderingTaxonomy, $cache)) {
@@ -102,7 +114,7 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
     if (class_exists('WC_Query')) {
         foreach (\WC_Query::get_layered_nav_chosen_attributes() as $taxonomy => $data) {
             if ($taxonomy === $renderingTaxonomy) {
-                continue; // esta taxonomía se resuelve término a término abajo
+                continue; // esta taxonomía se resuelve por término abajo, no aquí
             }
 
             $baseTaxQuery[] = [
@@ -114,23 +126,49 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
         }
     }
 
-    $counts = [];
+    // Paso 1: resolver el contexto actual (categoría + otros filtros) a
+    // una lista de IDs — una sola vez, sin filtrar todavía por
+    // $renderingTaxonomy.
+    $baseQuery = new \WP_Query([
+        'post_type' => 'product',
+        'post_status' => 'publish',
+        'posts_per_page' => -1,
+        'fields' => 'ids',
+        'no_found_rows' => true,
+        'tax_query' => $baseTaxQuery,
+        'suppress_filters' => false,
+    ]);
 
-    foreach ($terms as $termId => $slug) {
-        $taxQuery = $baseTaxQuery;
-        $taxQuery[] = ['taxonomy' => $renderingTaxonomy, 'field' => 'term_id', 'terms' => [(int) $termId]];
+    $productIds = $baseQuery->posts;
+    $counts = array_fill_keys(array_values($terms), 0);
 
-        $query = new \WP_Query([
-            'post_type' => 'product',
-            'post_status' => 'publish',
-            'posts_per_page' => 1,
-            'fields' => 'ids',
-            'no_found_rows' => false,
-            'tax_query' => $taxQuery,
-            'suppress_filters' => false,
-        ]);
+    if (empty($productIds)) {
+        return $cache[$renderingTaxonomy] = $counts;
+    }
 
-        $counts[$slug] = (int) $query->found_posts;
+    // Paso 2: un solo GROUP BY para contar cuántos de esos IDs tiene cada
+    // término de $renderingTaxonomy, en vez de una consulta por término.
+    $placeholders = implode(',', array_fill(0, count($productIds), '%d'));
+
+    $sql = "
+        SELECT tt.term_id, COUNT(DISTINCT tr.object_id) AS total
+        FROM {$wpdb->term_relationships} tr
+        INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+        WHERE tt.taxonomy = %s
+          AND tr.object_id IN ({$placeholders})
+        GROUP BY tt.term_id
+    ";
+
+    $rows = $wpdb->get_results(
+        $wpdb->prepare($sql, array_merge([$renderingTaxonomy], $productIds))
+    );
+
+    foreach ($rows as $row) {
+        $termId = (int) $row->term_id;
+
+        if (isset($terms[$termId])) {
+            $counts[$terms[$termId]] = (int) $row->total;
+        }
     }
 
     return $cache[$renderingTaxonomy] = $counts;
