@@ -649,6 +649,93 @@ function compareRbSizeValues(a, b) {
   return strA.localeCompare(strB);
 }
 
+// Variable y fallbacks tempranos para la imagen de variación si la galería aún no se ha inicializado
+window.pendingVariationImage = null;
+if (!window.rbApplyVariationImage) {
+  window.rbApplyVariationImage = function(url, alt) {
+    window.pendingVariationImage = { url, alt };
+  };
+}
+if (!window.rbClearVariationImage) {
+  window.rbClearVariationImage = function() {
+    window.pendingVariationImage = null;
+  };
+}
+
+function syncVariationImage(form) {
+  if (!form) return;
+  const isQuickView = !! form.closest('[data-quick-view-modal], [data-quick-view-target]');
+
+  // Detectar selects de opciones
+  const selects = [...form.querySelectorAll('.variations select')];
+  const colorSelect = selects.find((s) => /color/i.test(s.name || s.id || s.dataset.attribute_name || ''));
+  if (!colorSelect) return;
+
+  const selectedColor = colorSelect.value;
+  if (!selectedColor) {
+    if (!isQuickView) {
+      window.rbClearVariationImage?.();
+    }
+    return;
+  }
+
+  // Obtener array de variaciones
+  let variations = null;
+  if (window.jQuery) {
+    variations = window.jQuery(form).data('product_variations');
+  }
+  if (!variations && form.dataset.product_variations) {
+    try {
+      variations = JSON.parse(form.dataset.product_variations);
+    } catch {
+      variations = null;
+    }
+  }
+
+  if (!Array.isArray(variations) || variations.length === 0) return;
+
+  const tallaSelect = selects.find((s) => /talla|size/i.test(s.name || s.id || s.dataset.attribute_name || ''));
+  const selectedTalla = tallaSelect?.value || '';
+
+  const normalize = (v) => String(v || '').trim().toLowerCase();
+  const targetColor = normalize(selectedColor);
+  const targetTalla = normalize(selectedTalla);
+
+  // 1. Intentar coincidir color y talla a la vez
+  let match = null;
+  if (selectedTalla) {
+    match = variations.find((v) => {
+      if (!v || !v.attributes) return false;
+      const matchColor = Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && (normalize(val) === targetColor || val === ''));
+      const matchTalla = Object.entries(v.attributes).some(([k, val]) => (/talla/i.test(k) || /size/i.test(k)) && (normalize(val) === targetTalla || val === ''));
+      return matchColor && matchTalla;
+    });
+  }
+
+  // 2. Si no hay match con talla o no hay talla seleccionada, coincidir por color
+  if (!match) {
+    match = variations.find((v) => {
+      if (!v || !v.attributes) return false;
+      return Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && normalize(val) === targetColor);
+    });
+  }
+
+  if (match && match.image) {
+    const fullUrl = match.image.full_src || match.image.src || match.image.url;
+    if (fullUrl) {
+      if (!isQuickView) {
+        window.rbApplyVariationImage?.(fullUrl, match.image.alt || '');
+      } else {
+        const qvMain = form.closest('[data-quick-view-modal]')?.querySelector('#qv-main-image');
+        if (qvMain) {
+          qvMain.src = fullUrl;
+        }
+      }
+    }
+  }
+}
+window.rbSyncVariationImage = syncVariationImage;
+
 window.initSwatches = function() {
   document.querySelectorAll('.variations_form').forEach((form) => {
     const priceContainer = form.closest('.grid')?.querySelector('.rb-woo-price') || document.querySelector('.rb-woo-price');
@@ -694,7 +781,7 @@ window.initSwatches = function() {
         button.dataset.selected = String(select.value === option.value);
 
         button.addEventListener('click', () => {
-          // Volver a pulsar la talla activa la deselecciona o selecciona
+          // Volver a pulsar la talla/color activa la deselecciona o selecciona
           const newValue = select.value === option.value ? '' : option.value;
           select.value = newValue;
           select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -717,6 +804,9 @@ window.initSwatches = function() {
               labelEl.textContent = baseLabelText;
             }
           }
+
+          // Actualizar imagen inmediatamente si se seleccionó o cambió color
+          syncVariationImage(form);
         });
 
         list.appendChild(button);
@@ -744,53 +834,52 @@ window.initSwatches = function() {
             labelEl.textContent = baseLabelText;
           }
         }
+
+        syncVariationImage(form);
       };
 
       select.addEventListener('change', sync);
 
       if (window.jQuery) {
         window.jQuery(form).on('woocommerce_update_variation_values reset_data show_variation hide_variation', sync);
-        
-        window.jQuery(form).on('show_variation', (event, variation) => {
-          if (variation && variation.price_html && priceContainer) {
-            priceContainer.innerHTML = variation.price_html;
-          }
-
-          // WooCommerce siempre manda `variation.image`, tenga la
-          // variación foto propia o no (si no tiene, es la del padre —
-          // aplicarla de todos modos no cambia nada a la vista). Así que
-          // elegir un color con foto propia (ver
-          // scripts/assign-variation-images.php) cambia la imagen
-          // principal de la ficha, no solo el precio.
-          //
-          // Salvo dentro del quick-view: ese modal se abre desde las
-          // tarjetas del catálogo Y desde los productos relacionados al
-          // pie de una ficha. En ese segundo caso elegir un color en el
-          // modal le cambiaba la foto al producto de la ficha que está
-          // detrás, que es otro producto distinto.
-          const isQuickView = !! form.closest('[data-quick-view-modal], [data-quick-view-target]');
-
-          if (! isQuickView && variation && variation.image && variation.image.full_src) {
-            window.rbApplyVariationImage?.(variation.image.full_src, variation.image.alt);
-          }
-        });
-
-        window.jQuery(form).on('reset_data', () => {
-          if (priceContainer && priceContainer.dataset.originalPrice) {
-            priceContainer.innerHTML = priceContainer.dataset.originalPrice;
-          }
-          if (labelEl) labelEl.textContent = baseLabelText;
-
-          // Mismo motivo que en show_variation: un reset dentro del
-          // quick-view no debe tocar la galería de la ficha de fondo.
-          if (! form.closest('[data-quick-view-modal], [data-quick-view-target]')) {
-            window.rbClearVariationImage?.();
-          }
-        });
       }
 
       sync();
     });
+
+    if (window.jQuery && !form.dataset.rbJqueryInitialized) {
+      form.dataset.rbJqueryInitialized = 'true';
+
+      window.jQuery(form).on('show_variation', (event, variation) => {
+        if (variation && variation.price_html && priceContainer) {
+          priceContainer.innerHTML = variation.price_html;
+        }
+
+        const isQuickView = !! form.closest('[data-quick-view-modal], [data-quick-view-target]');
+
+        if (! isQuickView && variation && variation.image && (variation.image.full_src || variation.image.src)) {
+          window.rbApplyVariationImage?.(variation.image.full_src || variation.image.src, variation.image.alt);
+        } else if (isQuickView && variation && variation.image && (variation.image.full_src || variation.image.src)) {
+          const qvMain = form.closest('[data-quick-view-modal]')?.querySelector('#qv-main-image');
+          if (qvMain) {
+            qvMain.src = variation.image.full_src || variation.image.src;
+          }
+        }
+      });
+
+      window.jQuery(form).on('reset_data', () => {
+        if (priceContainer && priceContainer.dataset.originalPrice) {
+          priceContainer.innerHTML = priceContainer.dataset.originalPrice;
+        }
+        if (! form.closest('[data-quick-view-modal], [data-quick-view-target]')) {
+          window.rbClearVariationImage?.();
+        }
+      });
+
+      window.jQuery(form).on('hide_variation', () => {
+        syncVariationImage(form);
+      });
+    }
   });
 };
 
@@ -1509,7 +1598,15 @@ document.addEventListener('click', (e) => {
     if (!url) return;
     variationOverrideUrl = url;
 
+    // Desactivar el highlight de las miniaturas de galería general mientras se muestra la variación
+    thumbsByIndex.forEach((thumbsAtIndex) => {
+      thumbsAtIndex.forEach((thumb) => {
+        thumb.dataset.active = 'false';
+      });
+    });
+
     if (mainImg) {
+      mainImg.removeAttribute('srcset');
       mainImg.src = url;
       if (alt) mainImg.alt = alt;
       mainImg.dataset.full = url;
@@ -1534,6 +1631,17 @@ document.addEventListener('click', (e) => {
   window.rbApplyVariationImage = applyVariationImage;
   window.rbClearVariationImage = clearVariationImage;
 
+  if (window.pendingVariationImage) {
+    applyVariationImage(window.pendingVariationImage.url, window.pendingVariationImage.alt);
+    window.pendingVariationImage = null;
+  }
+
+  // Sincronizar inmediatamente si ya había un swatch de color seleccionado al cargar la galería
+  const activeVarForm = document.querySelector('.variations_form');
+  if (activeVarForm && typeof window.rbSyncVariationImage === 'function') {
+    window.rbSyncVariationImage(activeVarForm);
+  }
+
   function setActiveImage(index) {
     if (!totalImages || index < 0 || index >= totalImages) return;
     currentIndex = index;
@@ -1547,6 +1655,7 @@ document.addEventListener('click', (e) => {
     const fullUrl = imageUrls[index];
 
     if (mainImg && fullUrl) {
+      mainImg.removeAttribute('srcset');
       mainImg.src = fullUrl;
       mainImg.dataset.full = fullUrl;
     }
