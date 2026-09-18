@@ -212,15 +212,23 @@ function rb_sort_size_terms(array $terms): array
 }
 
 /**
- * Rango de precio ($min, $max) del contexto actual (categoría/etiqueta si
- * aplica), para dimensionar el slider del filtro de precio. Ignora los
- * productos a $0 — hoy son datos rotos (ver
- * scripts/unpublish-broken-products.php), no un precio real de catálogo, y
- * dejarían el slider empezando en $0 sin significado.
+ * Precios reales de todos los productos del contexto actual (categoría/
+ * etiqueta si aplica), ordenados — base compartida por
+ * rb_catalog_price_bounds(), rb_catalog_price_histogram() y
+ * rb_catalog_price_presets() para no repetir el mismo JOIN/WHERE en tres
+ * consultas separadas. Ignora los productos a $0 — hoy son datos rotos
+ * (ver scripts/unpublish-broken-products.php), no un precio real de
+ * catálogo, y descuadrarían tanto el rango como los tramos.
  */
-function rb_catalog_price_bounds(): array
+function rb_catalog_prices(): array
 {
     global $wpdb;
+
+    static $cache = null;
+
+    if ($cache !== null) {
+        return $cache;
+    }
 
     $join = "INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = '_price'";
     $where = "p.post_type = 'product' AND p.post_status = 'publish' AND pm.meta_value > 0";
@@ -231,12 +239,99 @@ function rb_catalog_price_bounds(): array
                    INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.term_id = " . (int) $queriedObject->term_id;
     }
 
-    $row = $wpdb->get_row("SELECT MIN(pm.meta_value + 0) AS min_price, MAX(pm.meta_value + 0) AS max_price FROM {$wpdb->posts} p {$join} WHERE {$where}");
+    $prices = $wpdb->get_col("SELECT pm.meta_value + 0 FROM {$wpdb->posts} p {$join} WHERE {$where} ORDER BY pm.meta_value + 0 ASC");
+
+    return $cache = array_map('floatval', $prices);
+}
+
+/**
+ * Rango de precio ($min, $max) del contexto actual, para dimensionar el
+ * slider del filtro de precio.
+ */
+function rb_catalog_price_bounds(): array
+{
+    $prices = rb_catalog_prices();
+
+    if (empty($prices)) {
+        return ['min' => 0, 'max' => 0];
+    }
+
+    return ['min' => $prices[0], 'max' => $prices[count($prices) - 1]];
+}
+
+/**
+ * Histograma del precio en $buckets tramos iguales, para dibujar la
+ * distribución de productos detrás del slider (como Amazon o Airbnb):
+ * ver de un vistazo dónde se concentra el catálogo antes de mover el
+ * control, en vez de adivinar arrastrando a ciegas.
+ */
+function rb_catalog_price_histogram(int $buckets = 12): array
+{
+    $prices = rb_catalog_prices();
+
+    if (count($prices) < 2) {
+        return array_fill(0, $buckets, 0);
+    }
+
+    $min = $prices[0];
+    $max = $prices[count($prices) - 1];
+    $range = $max - $min;
+
+    $counts = array_fill(0, $buckets, 0);
+
+    if ($range <= 0) {
+        $counts[0] = count($prices);
+
+        return $counts;
+    }
+
+    foreach ($prices as $price) {
+        $bucket = (int) floor((($price - $min) / $range) * $buckets);
+        $bucket = min($bucket, $buckets - 1); // el precio máximo cae justo en el borde superior
+        $counts[$bucket]++;
+    }
+
+    $peak = max($counts);
+
+    // Normalizado a 0-100 (altura en %) para que la plantilla no tenga que
+    // calcular nada, solo pintar barras.
+    return $peak > 0 ? array_map(fn ($c) => (int) round(($c / $peak) * 100), $counts) : $counts;
+}
+
+/**
+ * 3 tramos de precio para clics rápidos ("Hasta $X", "$X - $Y", "Desde
+ * $Y"), calculados sobre los precios reales del catálogo (terciles), no
+ * bandas fijas inventadas — con un catálogo que va de bidones a
+ * bicicletas de $13M, un corte fijo cada $2M dejaría casi todo en el
+ * primer tramo. Redondeado a la decena de mil más cercana para que se
+ * lea como un precio real, no como un cálculo.
+ */
+function rb_catalog_price_presets(): array
+{
+    $prices = rb_catalog_prices();
+
+    if (count($prices) < 3) {
+        return [];
+    }
+
+    $round = static fn (float $n): int => (int) (round($n / 10000) * 10000);
+
+    $p33 = $round($prices[(int) floor(count($prices) * 0.33)]);
+    $p66 = $round($prices[(int) floor(count($prices) * 0.66)]);
+    $min = $round($prices[0]);
+    $max = $round($prices[count($prices) - 1]);
 
     return [
-        'min' => $row && $row->min_price !== null ? (float) $row->min_price : 0,
-        'max' => $row && $row->max_price !== null ? (float) $row->max_price : 0,
+        ['min' => $min, 'max' => $p33, 'label' => sprintf(__('Hasta %s', 'sage'), rb_format_cop($p33))],
+        ['min' => $p33, 'max' => $p66, 'label' => sprintf('%s – %s', rb_format_cop($p33), rb_format_cop($p66))],
+        ['min' => $p66, 'max' => $max, 'label' => sprintf(__('Desde %s', 'sage'), rb_format_cop($p66))],
     ];
+}
+
+/** "$1.500.000" sin decimales, para las etiquetas de precio del sidebar. */
+function rb_format_cop(float $amount): string
+{
+    return '$' . number_format_i18n($amount, 0);
 }
 
 /**

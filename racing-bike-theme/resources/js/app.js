@@ -2332,6 +2332,12 @@ function initCatalogAjaxFilters() {
         window.rbInitGa4ListImpressions?.(grid);
         window.rbRepaintWishlistButtons?.();
 
+        // Los sidebars (escritorio y drawer móvil) también se
+        // reemplazaron enteros: el slider de precio que llega en el HTML
+        // nuevo es igual de huérfano que el selector de vista de arriba.
+        initPriceSlider(document.getElementById('catalog-sidebar-desktop') ?? document);
+        initPriceSlider(document.getElementById('catalog-sidebar-mobile') ?? document);
+
         // Si el clic vino de dentro del drawer de filtros en móvil, el
         // drawer se queda abierto (tocar 3 filtros seguidos ya no exige
         // reabrirlo 3 veces) — y en ese caso NO se mueve el foco ni el
@@ -2614,3 +2620,106 @@ document.addEventListener('mouseleave', (e) => {
   });
 }, true);
   
+
+/* -------------------------------------------------------------------------
+ | Filtro de precio: slider doble con histograma
+ |
+ | Reemplaza los dos <input type="number"> sueltos. Cada [data-price-slider]
+ | trae dos <input type="range"> superpuestos (mínimo y máximo) más un div
+ | [data-price-fill] que pinta el tramo activo entre ambos. Aplica el
+ | filtro solo, sin botón: al soltar cualquiera de los dos tiradores
+ | (evento "change", no "input" — si no, mandaría un filtro por cada
+ | píxel arrastrado) o al tocar uno de los tramos de un clic.
+ |
+ | Expuesto como initPriceSlider() (no una IIFE) porque
+ | initCatalogAjaxFilters, en el módulo de más abajo, lo vuelve a llamar
+ | cada vez que reemplaza el sidebar por AJAX — los <input> nuevos llegan
+ | sin ningún listener propio.
+ * ---------------------------------------------------------------------- */
+
+function initPriceSlider(root = document) {
+  root.querySelectorAll('[data-price-slider]').forEach((container) => {
+    const minRange = container.querySelector('[data-price-min-range]');
+    const maxRange = container.querySelector('[data-price-max-range]');
+    const fill = container.querySelector('[data-price-fill]');
+    if (!minRange || !maxRange || !fill) return;
+
+    const form = minRange.form;
+    const minLabel = form?.querySelector('[data-price-min-label]');
+    const maxLabel = form?.querySelector('[data-price-max-label]');
+
+    const boundMin = Number(minRange.min);
+    const boundMax = Number(minRange.max);
+    const span = boundMax - boundMin || 1;
+    // Que no se crucen los dos tiradores: sin este piso, arrastrar el de
+    // "desde" más allá del de "hasta" (o viceversa) los deja invertidos y
+    // el relleno verde se pinta al revés.
+    const minGap = Math.max(Number(minRange.step) || 1, Math.round(span * 0.01));
+
+    const formatCOP = (value) => `$${Math.round(value).toLocaleString('es-CO')}`;
+
+    const paintFill = (minVal, maxVal) => {
+      const minPct = ((minVal - boundMin) / span) * 100;
+      const maxPct = ((maxVal - boundMin) / span) * 100;
+      fill.style.left = `${minPct}%`;
+      fill.style.right = `${100 - maxPct}%`;
+    };
+
+    const paintLabels = (minVal, maxVal) => {
+      if (minLabel) minLabel.textContent = formatCOP(minVal);
+      if (maxLabel) maxLabel.textContent = formatCOP(maxVal);
+      minRange.setAttribute('aria-valuetext', formatCOP(minVal));
+      maxRange.setAttribute('aria-valuetext', formatCOP(maxVal));
+    };
+
+    const enforceGap = (movedInput) => {
+      let minVal = Number(minRange.value);
+      let maxVal = Number(maxRange.value);
+
+      if (minVal > maxVal - minGap) {
+        if (movedInput === maxRange) {
+          minVal = maxVal - minGap;
+          minRange.value = String(Math.max(boundMin, minVal));
+        } else {
+          maxVal = minVal + minGap;
+          maxRange.value = String(Math.min(boundMax, maxVal));
+        }
+      }
+
+      return [Number(minRange.value), Number(maxRange.value)];
+    };
+
+    const handleInput = (event) => {
+      const [minVal, maxVal] = enforceGap(event.target);
+      paintFill(minVal, maxVal);
+      paintLabels(minVal, maxVal);
+    };
+
+    minRange.addEventListener('input', handleInput);
+    maxRange.addEventListener('input', handleInput);
+    minRange.addEventListener('change', () => form?.requestSubmit());
+    maxRange.addEventListener('change', () => form?.requestSubmit());
+
+    // Estado inicial: pintar sin esperar a que el visitante toque nada.
+    paintFill(Number(minRange.value), Number(maxRange.value));
+    paintLabels(Number(minRange.value), Number(maxRange.value));
+  });
+
+  root.querySelectorAll('[data-price-preset]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const form = button.closest('form');
+      const minRange = form?.querySelector('[data-price-min-range]');
+      const maxRange = form?.querySelector('[data-price-max-range]');
+      if (!form || !minRange || !maxRange) return;
+
+      minRange.value = button.dataset.presetMin;
+      maxRange.value = button.dataset.presetMax;
+      // "input" repinta el relleno/las etiquetas con el mismo código que
+      // usa arrastrar el slider — un solo camino para los dos gestos.
+      minRange.dispatchEvent(new Event('input', { bubbles: true }));
+      form.requestSubmit();
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => initPriceSlider());

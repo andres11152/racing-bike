@@ -25,8 +25,17 @@
   }
 
   $priceBounds = \App\rb_catalog_price_bounds();
-  $minPrice = isset($_GET['min_price']) ? max(0, (int) $_GET['min_price']) : null;
-  $maxPrice = isset($_GET['max_price']) ? max(0, (int) $_GET['max_price']) : null;
+  $priceHistogram = \App\rb_catalog_price_histogram();
+  $pricePresets = \App\rb_catalog_price_presets();
+  $priceBoundMin = (int) $priceBounds['min'];
+  $priceBoundMax = (int) $priceBounds['max'];
+  $minPrice = isset($_GET['min_price']) ? max($priceBoundMin, (int) $_GET['min_price']) : $priceBoundMin;
+  $maxPrice = isset($_GET['max_price']) ? min($priceBoundMax, (int) $_GET['max_price']) : $priceBoundMax;
+  // ~150 pasos a lo largo de todo el rango, redondeado a un múltiplo de
+  // 1.000 legible — con un catálogo de $45.000 a $13M, arrastrar el
+  // slider en pasos de a $1 se sentiría infinito y en pasos de $100.000
+  // se sentiría tosco.
+  $priceStep = max(1000, (int) round((($priceBoundMax - $priceBoundMin) / 150) / 1000) * 1000);
 @endphp
 
 <div class="space-y-8">
@@ -46,51 +55,103 @@
   {{--
     Filtro de precio: WooCommerce ya sabe leer min_price/max_price en la
     consulta principal de la tienda (es como funciona su propio widget de
-    precio nativo) — solo faltaba un formulario que los mande. Los demás
+    precio nativo) — solo hacía falta un control mejor que dos campos de
+    texto sueltos. Slider doble con el histograma real de precios detrás
+    (para ver dónde se concentra el catálogo antes de mover nada) y 3
+    tramos de un clic calculados sobre esos mismos precios. Los demás
     filtros activos van como campos ocultos para no perderse al enviar
     este formulario, que solo trae sus propios dos campos en el GET.
   --}}
-  @if ($priceBounds['max'] > 0)
+  @if ($priceBoundMax > 0 && $priceBoundMax > $priceBoundMin)
     <fieldset class="space-y-3 border-0 p-0 m-0">
       <legend class="text-xs font-bold uppercase tracking-wider text-ink p-0">{{ __('Precio', 'sage') }}</legend>
 
-      <form method="get" action="{{ $currentUrl }}" class="flex items-center gap-2">
+      <form
+        method="get"
+        action="{{ $currentUrl }}"
+        class="space-y-3"
+        data-price-filter-form
+      >
         @foreach ($_GET as $key => $value)
           @continue(in_array($key, ['min_price', 'max_price', 'paged'], true) || is_array($value))
           <input type="hidden" name="{{ $key }}" value="{{ $value }}">
         @endforeach
 
-        <label class="sr-only" for="rb-min-price">{{ __('Precio mínimo', 'sage') }}</label>
-        <input
-          id="rb-min-price"
-          type="number"
-          name="min_price"
-          min="0"
-          step="1000"
-          inputmode="numeric"
-          placeholder="{{ number_format_i18n((int) $priceBounds['min']) }}"
-          value="{{ $minPrice }}"
-          class="w-full min-w-0 rounded border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink"
-        >
-        <span class="text-ink-subtle text-xs" aria-hidden="true">–</span>
-        <label class="sr-only" for="rb-max-price">{{ __('Precio máximo', 'sage') }}</label>
-        <input
-          id="rb-max-price"
-          type="number"
-          name="max_price"
-          min="0"
-          step="1000"
-          inputmode="numeric"
-          placeholder="{{ number_format_i18n((int) $priceBounds['max']) }}"
-          value="{{ $maxPrice }}"
-          class="w-full min-w-0 rounded border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink"
-        >
+        {{-- Valores actuales: lo primero que se lee, grande y en vivo. --}}
+        <div class="flex items-center justify-between text-sm font-bold text-ink tabular-nums">
+          <span data-price-min-label>{{ \App\rb_format_cop($minPrice) }}</span>
+          <span class="text-[10px] font-normal text-ink-subtle" aria-hidden="true">—</span>
+          <span data-price-max-label>{{ \App\rb_format_cop($maxPrice) }}</span>
+        </div>
+
+        <div class="pt-1" data-price-slider>
+          {{-- Histograma: dónde se concentra el catálogo, antes de arrastrar nada. --}}
+          <div class="mb-1.5 flex h-7 items-end gap-px" aria-hidden="true">
+            @foreach ($priceHistogram as $barHeight)
+              <div class="min-h-[3px] flex-1 rounded-[1px] bg-line-strong/70" style="height: {{ max((int) $barHeight, 6) }}%"></div>
+            @endforeach
+          </div>
+
+          {{-- Track + relleno + los dos tiradores, superpuestos. --}}
+          <div class="relative h-5">
+            <div class="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line-strong"></div>
+            <div class="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-emerald-400" data-price-fill></div>
+
+            <input
+              type="range"
+              name="min_price"
+              class="rb-range"
+              min="{{ $priceBoundMin }}"
+              max="{{ $priceBoundMax }}"
+              step="{{ $priceStep }}"
+              value="{{ $minPrice }}"
+              data-price-min-range
+              aria-label="{{ __('Precio mínimo', 'sage') }}"
+            >
+            <input
+              type="range"
+              name="max_price"
+              class="rb-range"
+              min="{{ $priceBoundMin }}"
+              max="{{ $priceBoundMax }}"
+              step="{{ $priceStep }}"
+              value="{{ $maxPrice }}"
+              data-price-max-range
+              aria-label="{{ __('Precio máximo', 'sage') }}"
+            >
+          </div>
+        </div>
+
+        {{-- Tramos de un clic, calculados sobre los precios reales del catálogo. --}}
+        @if ($pricePresets)
+          <div class="flex flex-wrap gap-1.5">
+            @foreach ($pricePresets as $preset)
+              <button
+                type="button"
+                class="rounded-full border border-line-strong px-2.5 py-1 text-[10px] font-semibold text-ink-muted transition-colors hover:border-ink hover:text-ink cursor-pointer"
+                data-price-preset
+                data-preset-min="{{ $preset['min'] }}"
+                data-preset-max="{{ $preset['max'] }}"
+              >
+                {{ $preset['label'] }}
+              </button>
+            @endforeach
+          </div>
+        @endif
+
+        {{--
+          Envío normal como respaldo sin JS (el slider sigue funcionando
+          con las flechas del teclado y este botón aplica el valor). Con
+          JS, initPriceSlider() ya manda el formulario solo al soltar
+          cada tirador o al tocar un tramo — este botón rara vez hace
+          falta, pero se deja visible en vez de ocultarlo con JS para no
+          depender de que el script cargue a tiempo.
+        --}}
         <button
           type="submit"
-          class="shrink-0 rounded border border-line-strong px-2.5 py-1.5 text-ink hover:bg-surface-muted transition-colors"
-          aria-label="{{ __('Aplicar filtro de precio', 'sage') }}"
+          class="w-full rounded-full border border-line-strong py-1.5 text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:border-ink hover:text-ink cursor-pointer"
         >
-          <x-icon name="chevron-right" class="size-3.5" />
+          {{ __('Aplicar', 'sage') }}
         </button>
       </form>
     </fieldset>

@@ -28,6 +28,7 @@ rsync -avz --checksum -e "ssh -i $SSH_KEY -p $SSH_PORT" \
   "$SSH_USER@$SSH_HOST:~/$REMOTE_WP_ROOT/wp-content/plugins/${PLUGIN}/"
 
 clear_acorn_view_cache
+purge_litespeed_cache
 
 echo ""
 echo "Plugin '${PLUGIN}' desplegado."
