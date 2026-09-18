@@ -71,6 +71,9 @@ foreach ($ids as $productId) {
     foreach ($attributes as $attr) {
         $clave = strtolower(str_replace(['pa_', '-', '_'], ['', ' ', ' '], $attr->get_name()));
         $clave = trim(preg_replace('/\s+/', ' ', $clave));
+        if ($clave === 'colores') {
+            $clave = 'color';
+        }
         $porNombreNormalizado[$clave][] = $attr;
     }
 
