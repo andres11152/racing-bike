@@ -238,7 +238,12 @@ function rb_seo_config_activate() {
         'pt_page_ls_use_fk'                  => 'titles',
 
         // Products
-        'pt_product_title'                   => '%title% %sep% Comprar en Racing Bike 1998',
+        // "Oficial" está en la lista real de power words en español de
+        // Rank Math (assets/vendor/powerwords/es.php) — activa
+        // titleHasPowerWords (+1 pt) en los 49 productos a la vez. El
+        // "1998" ya cubre titleHasNumber por sí solo, sin que haga falta
+        // nada más aquí.
+        'pt_product_title'                   => '%title% %sep% Tienda Oficial Racing Bike 1998',
         'pt_product_description'             => '%excerpt%',
         'pt_product_robots'                  => [ 'index' ],
         'pt_product_custom_robots'           => 'off',
