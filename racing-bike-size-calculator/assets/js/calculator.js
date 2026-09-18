@@ -97,12 +97,68 @@ function initRbSizeCalculator() {
         return null;
     }
 
-    // Bloquea el scroll de fondo mientras el modal está abierto: en móvil,
-    // sin esto la página detrás se movía junto con el gesto de scroll dentro
-    // del modal (o directamente en vez de él).
+    // Detecta inteligentemente la disciplina del producto que se está viendo en la página
+    function detectPageDiscipline() {
+        // 1. Atributo explícito pasado por el tema
+        const explicitEl = document.querySelector('[data-bike-discipline]');
+        const disc = explicitEl?.dataset?.bikeDiscipline?.toLowerCase();
+        if (disc && ['road', 'mtb', 'gravel'].includes(disc)) {
+            return disc;
+        }
+
+        // 2. Heurística por textos de la página (título, migas de pan, categoría)
+        const texts = [
+            document.querySelector('h1')?.textContent || '',
+            ...[...document.querySelectorAll('.breadcrumbs, nav[aria-label="Breadcrumb"], .rb-breadcrumbs, [data-rb-track-view]')].map((el) => el.textContent || el.dataset?.rbTrackView || '')
+        ].join(' ').toLowerCase();
+
+        if (/\bgravel\b/i.test(texts)) return 'gravel';
+        if (/\b(mtb|mountain|monta[nñ]a)\b/i.test(texts)) return 'mtb';
+        if (/\b(ruta|road|carretera)\b/i.test(texts)) return 'road';
+
+        // 3. Heurística por rango de tallas numéricas en los swatches
+        const swatches = [...document.querySelectorAll('.rb-swatch')].filter((s) => isSizeAttributeName(s.dataset.attribute));
+        const nums = swatches
+            .map((s) => parseFloat(s.textContent.trim()))
+            .filter((n) => !Number.isNaN(n));
+
+        if (nums.length > 0) {
+            const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+            if (avg < 30) return 'mtb'; // Pulgadas de MTB (13 a 21)
+            if (avg >= 40) return 'road'; // Centímetros de Ruta (44 a 62)
+        }
+
+        return null;
+    }
+
+    // Bloquea el scroll de fondo mientras el modal está abierto y autodetecta la disciplina
     function openModal() {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+
+        const detected = detectPageDiscipline();
+        const badge = document.getElementById('rb-detected-discipline-badge');
+
+        if (detected && ['road', 'mtb', 'gravel'].includes(detected)) {
+            selectedDiscipline = detected;
+            disciplineBtns.forEach((b) => {
+                const disc = b.getAttribute('data-discipline');
+                if (disc === detected) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+
+            if (badge) {
+                const discNames = { road: 'Ruta / Road', mtb: 'Montaña / MTB', gravel: 'Gravel' };
+                badge.textContent = `⚡ Detectada: ${discNames[detected] || detected.toUpperCase()}`;
+                badge.style.display = 'inline-block';
+            }
+        } else {
+            if (badge) badge.style.display = 'none';
+        }
+
         calculateSize();
     }
 
@@ -175,6 +231,90 @@ function initRbSizeCalculator() {
         });
     });
 
+    // Calcula talla biomecánica para una disciplina específica
+    function calculateDisciplineSize(discipline, inseam) {
+        let letter = 'M';
+        let frameSizeDesc = '';
+        let longDesc = '';
+        let numericSize = null;
+
+        if (discipline === 'road') {
+            const cm = Math.round(inseam * 0.67);
+            frameSizeDesc = `${cm} cm`;
+            numericSize = cm;
+
+            if (cm < 50) {
+                letter = 'XXS';
+                longDesc = 'Talla XXS (44-49 cm). La más compacta del catálogo, para ciclistas de baja estatura en ruta.';
+            } else if (cm < 52) {
+                letter = 'XS';
+                longDesc = 'Talla XS (50-51 cm). Diseñada para máxima agilidad y reactividad en carretera.';
+            } else if (cm < 54) {
+                letter = 'S';
+                longDesc = 'Talla S (52-53 cm). Equilibrio perfecto entre aerodinámica y reactividad en carretera.';
+            } else if (cm < 56) {
+                letter = 'M';
+                longDesc = 'Talla M (54-55 cm). El estándar de oro: balance óptimo de rigidez, confort y velocidad.';
+            } else if (cm < 58) {
+                letter = 'L';
+                longDesc = 'Talla L (56-57 cm). Máxima estabilidad y potencia de palanca en planos y descensos rápidos.';
+            } else {
+                letter = 'XL';
+                longDesc = 'Talla XL (58 cm en adelante). Mayor alcance y estabilidad para ciclistas de estatura alta.';
+            }
+        } else if (discipline === 'mtb') {
+            const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
+            frameSizeDesc = `${inches}"`;
+            numericSize = inches;
+
+            if (inches < 13) {
+                letter = 'XXS';
+                longDesc = 'Talla XXS (menos de 13"). Máxima altura libre y control para senderos técnicos.';
+            } else if (inches < 15) {
+                letter = 'XS';
+                longDesc = 'Talla XS (13-14"). Excelente maniobrabilidad en descensos y senderos estrechos.';
+            } else if (inches < 17) {
+                letter = 'S';
+                longDesc = 'Talla S (15-16"). Geometría juguetona y reactiva en terrenos de montaña.';
+            } else if (inches < 19) {
+                letter = 'M';
+                longDesc = 'Talla M (17-18"). Control preciso y estabilidad óptima en ascensos y descensos.';
+            } else if (inches < 21) {
+                letter = 'L';
+                longDesc = 'Talla L (19-20"). Mayor tracción y estabilidad en altas velocidades campo traviesa.';
+            } else {
+                letter = 'XL';
+                longDesc = 'Talla XL (21" en adelante). Máximo alcance para ciclistas de estatura alta en montaña.';
+            }
+        } else { // Gravel
+            const cm = Math.round(inseam * 0.63);
+            frameSizeDesc = `${cm} cm`;
+            numericSize = cm;
+
+            if (cm < 47) {
+                letter = 'XXS';
+                longDesc = 'Talla XXS (menos de 47 cm). Gran maniobrabilidad en terrenos mixtos.';
+            } else if (cm < 50) {
+                letter = 'XS';
+                longDesc = 'Talla XS (47-49 cm). Diseñada para comodidad y respuesta en caminos destapados.';
+            } else if (cm < 53) {
+                letter = 'S';
+                longDesc = 'Talla S (50-52 cm). Óptimo confort en aventuras de gravel y asfalto rugoso.';
+            } else if (cm < 56) {
+                letter = 'M';
+                longDesc = 'Talla M (53-55 cm). Balance ideal entre postura erguida de fondo y velocidad.';
+            } else if (cm < 59) {
+                letter = 'L';
+                longDesc = 'Talla L (56-58 cm). Gran estabilidad de rodadura para largas travesías.';
+            } else {
+                letter = 'XL';
+                longDesc = 'Talla XL (59 cm en adelante). Mayor alcance para ciclistas de estatura alta en gravel.';
+            }
+        }
+
+        return { letter, frameSizeDesc, longDesc, numericSize };
+    }
+
     // Main calculation logic
     function calculateSize() {
         if (!heightInput || !recSizeEl || !recDescEl) return;
@@ -191,94 +331,11 @@ function initRbSizeCalculator() {
             }
         }
 
-        let letter = 'M';
-        let frameSizeDesc = '';
-        let longDesc = '';
-        let numericSize = null;
-
-        // El catálogo real va de XXS a XL en tallas por letra (confirmado en
-        // WooCommerce > Atributos > Talla: hay productos con XXS y con XL,
-        // no solo XS-L como asumía la versión anterior de este archivo) y de
-        // 13" a 62 cm en tallas numéricas (bicicletas importadas: Trek/Orbea
-        // en ruta, algunas MTB). Los 6 tramos de letra de cada disciplina
-        // cubren ese rango completo; el valor numérico (`cm`/`inches`) se
-        // calcula siempre de forma continua, sin acotar, para que la
-        // selección en productos de talla numérica (más abajo, en
-        // pickBestSizeOption) pueda buscar la opción más cercana en todo el
-        // rango real del catálogo, no solo dentro de un tramo de letra.
-        if (selectedDiscipline === 'road') {
-            const cm = Math.round(inseam * 0.67);
-            frameSizeDesc = `${cm} cm`;
-            numericSize = cm;
-
-            if (cm < 50) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (44-49 cm). La más compacta del catálogo, para máxima maniobrabilidad en ciclistas de baja estatura.';
-            } else if (cm < 52) {
-                letter = 'XS';
-                longDesc = 'Talla XS (50-51 cm). Recomendado para una conducción ágil y compacta en asfalto.';
-            } else if (cm < 54) {
-                letter = 'S';
-                longDesc = 'Talla S (52-53 cm). Equilibrio perfecto entre aerodinámica y reactividad en carretera.';
-            } else if (cm < 56) {
-                letter = 'M';
-                longDesc = 'Talla M (54-55 cm). El estándar de oro: balance óptimo de rigidez, comodidad y velocidad.';
-            } else if (cm < 58) {
-                letter = 'L';
-                longDesc = 'Talla L (56-57 cm). Máxima estabilidad y potencia de palanca en planos y descensos rápidos.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (58 cm en adelante). Mayor alcance y estabilidad para ciclistas de estatura alta.';
-            }
-        } else if (selectedDiscipline === 'mtb') {
-            const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
-            frameSizeDesc = `${inches}"`;
-            numericSize = inches;
-
-            if (inches < 13) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (menos de 13"). Máxima altura libre y agilidad para ciclistas de baja estatura.';
-            } else if (inches < 15) {
-                letter = 'XS';
-                longDesc = 'Talla XS (13-14"). Excelente altura libre para descensos técnicos y senderos sinuosos.';
-            } else if (inches < 17) {
-                letter = 'S';
-                longDesc = 'Talla S (15-16"). Geometría juguetona y reactiva en terrenos de montaña intermedios.';
-            } else if (inches < 19) {
-                letter = 'M';
-                longDesc = 'Talla M (17-18"). Control preciso y estabilidad óptima en ascensos y senderos.';
-            } else if (inches < 21) {
-                letter = 'L';
-                longDesc = 'Talla L (19-20"). Mayor tracción y estabilidad en altas velocidades campo traviesa.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (21" en adelante). Máximo alcance para ciclistas de estatura alta en montaña.';
-            }
-        } else { // Gravel
-            const cm = Math.round(inseam * 0.63);
-            frameSizeDesc = `${cm} cm`;
-            numericSize = cm;
-
-            if (cm < 47) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (menos de 47 cm). La más compacta, para máxima maniobrabilidad en terrenos mixtos.';
-            } else if (cm < 50) {
-                letter = 'XS';
-                longDesc = 'Talla XS (47-49 cm). Diseñada para comodidad y respuesta en terrenos mixtos.';
-            } else if (cm < 53) {
-                letter = 'S';
-                longDesc = 'Talla S (50-52 cm). Óptimo confort en aventuras de gravel y asfalto rugoso.';
-            } else if (cm < 56) {
-                letter = 'M';
-                longDesc = 'Talla M (53-55 cm). Balance ideal entre postura erguida de fondo y eficiencia.';
-            } else if (cm < 59) {
-                letter = 'L';
-                longDesc = 'Talla L (56-58 cm). Diseñada para largas distancias con gran estabilidad de rodadura.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (59 cm en adelante). Mayor alcance para ciclistas de estatura alta en gravel.';
-            }
-        }
+        const currentResult = calculateDisciplineSize(selectedDiscipline, inseam);
+        const letter = currentResult.letter;
+        const frameSizeDesc = currentResult.frameSizeDesc;
+        const longDesc = currentResult.longDesc;
+        const numericSize = currentResult.numericSize;
 
         currentSizeLetter = letter;
         currentSizeNumeric = numericSize;
@@ -314,15 +371,23 @@ function initRbSizeCalculator() {
             ? `Esta es la talla disponible más cercana a tu medida en este producto${availableSizesText ? ` (opciones: ${availableSizesText})` : ''}. ${longDesc}`
             : longDesc;
 
-        // Persistir la talla recomendada en localStorage y cookies. Se
-        // guarda también el número (cm/pulgadas) además de la letra: los
-        // productos con tallas numéricas (Trek/Orbea en ruta, algunas MTB)
-        // se seleccionan por ese número, no por la letra.
+        // Persistir la talla recomendada y el perfil multidisciplina en localStorage y cookies.
+        const roadResult = calculateDisciplineSize('road', inseam);
+        const mtbResult = calculateDisciplineSize('mtb', inseam);
+        const gravelResult = calculateDisciplineSize('gravel', inseam);
+
         localStorage.setItem('rb_user_bike_size', JSON.stringify({
             discipline: selectedDiscipline,
             size: letter,
             numeric: numericSize,
             desc: frameSizeDesc,
+            height,
+            inseam,
+            disciplines: {
+                road: { size: roadResult.letter, numeric: roadResult.numericSize, desc: roadResult.frameSizeDesc },
+                mtb: { size: mtbResult.letter, numeric: mtbResult.numericSize, desc: mtbResult.frameSizeDesc },
+                gravel: { size: gravelResult.letter, numeric: gravelResult.numericSize, desc: gravelResult.frameSizeDesc },
+            },
             timestamp: Date.now()
         }));
         document.cookie = `rb_user_bike_size=${letter};path=/;max-age=31536000;SameSite=Lax`;
@@ -332,7 +397,19 @@ function initRbSizeCalculator() {
         // ficha de producto (app.js) seleccione en vivo el swatch real
         // mientras se mueve el slider, no solo al pulsar "Aplicar".
         window.dispatchEvent(new CustomEvent('rb_size_calculated', {
-            detail: { size: letter, numeric: numericSize, discipline: selectedDiscipline, desc: frameSizeDesc }
+            detail: {
+                size: letter,
+                numeric: numericSize,
+                discipline: selectedDiscipline,
+                desc: frameSizeDesc,
+                height,
+                inseam,
+                disciplines: {
+                    road: roadResult,
+                    mtb: mtbResult,
+                    gravel: gravelResult,
+                }
+            }
         }));
 
         if (applyBtn) {

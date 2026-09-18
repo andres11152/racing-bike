@@ -1960,6 +1960,25 @@ document.addEventListener('click', (e) => {
   const banner = document.getElementById('rb-size-recommendation-banner');
   if (!banner) return;
 
+  function getPageDiscipline() {
+    const el = document.querySelector('[data-bike-discipline]');
+    const disc = el?.dataset?.bikeDiscipline?.toLowerCase();
+    if (disc && ['road', 'mtb', 'gravel'].includes(disc)) {
+      return disc;
+    }
+
+    const texts = [
+      document.querySelector('h1')?.textContent || '',
+      ...[...document.querySelectorAll('.breadcrumbs, nav[aria-label="Breadcrumb"], .rb-breadcrumbs, [data-rb-track-view]')].map((e) => e.textContent || e.dataset?.rbTrackView || '')
+    ].join(' ').toLowerCase();
+
+    if (/\bgravel\b/i.test(texts)) return 'gravel';
+    if (/\b(mtb|mountain|monta[nñ]a)\b/i.test(texts)) return 'mtb';
+    if (/\b(ruta|road|carretera)\b/i.test(texts)) return 'road';
+
+    return null;
+  }
+
   function getStoredSize() {
     try {
       const data = localStorage.getItem('rb_user_bike_size');
@@ -1973,6 +1992,65 @@ document.addEventListener('click', (e) => {
       return { size: match[1] };
     }
     return null;
+  }
+
+  function getStoredSizeForCurrentProduct() {
+    const raw = getStoredSize();
+    if (!raw) return null;
+
+    const currentDisc = getPageDiscipline();
+
+    // Si tiene perfil multidisiciplinar
+    if (raw.disciplines && currentDisc && raw.disciplines[currentDisc]) {
+      const discData = raw.disciplines[currentDisc];
+      return {
+        size: discData.size,
+        numeric: discData.numeric,
+        desc: discData.desc,
+        discipline: currentDisc,
+      };
+    }
+
+    // Si tiene medidas corporales almacenadas, calcular la talla en vivo para esta disciplina
+    if (raw.height || raw.inseam) {
+      const height = parseInt(raw.height || 175, 10);
+      const inseam = parseInt(raw.inseam || Math.round(height * 0.457), 10);
+      const disc = currentDisc || raw.discipline || 'road';
+
+      if (disc === 'mtb') {
+        const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
+        let letter = 'M';
+        if (inches < 13) letter = 'XXS';
+        else if (inches < 15) letter = 'XS';
+        else if (inches < 17) letter = 'S';
+        else if (inches < 19) letter = 'M';
+        else if (inches < 21) letter = 'L';
+        else letter = 'XL';
+        return { size: letter, numeric: inches, desc: `${inches}"`, discipline: 'mtb' };
+      } else if (disc === 'gravel') {
+        const cm = Math.round(inseam * 0.63);
+        let letter = 'M';
+        if (cm < 47) letter = 'XXS';
+        else if (cm < 50) letter = 'XS';
+        else if (cm < 53) letter = 'S';
+        else if (cm < 56) letter = 'M';
+        else if (cm < 59) letter = 'L';
+        else letter = 'XL';
+        return { size: letter, numeric: cm, desc: `${cm} cm`, discipline: 'gravel' };
+      } else {
+        const cm = Math.round(inseam * 0.67);
+        let letter = 'M';
+        if (cm < 50) letter = 'XXS';
+        else if (cm < 52) letter = 'XS';
+        else if (cm < 54) letter = 'S';
+        else if (cm < 56) letter = 'M';
+        else if (cm < 58) letter = 'L';
+        else letter = 'XL';
+        return { size: letter, numeric: cm, desc: `${cm} cm`, discipline: 'road' };
+      }
+    }
+
+    return raw;
   }
 
   // Algunos productos (bicicletas de ruta Trek/Orbea, MTB Zebra/Alligator/
@@ -2046,8 +2124,13 @@ document.addEventListener('click', (e) => {
   }
 
   function updateBanner(shouldAutoSelect = false) {
-    const data = getStoredSize();
+    const data = getStoredSizeForCurrentProduct();
     if (data && data.size) {
+      const discLabels = { mtb: 'Montaña / MTB', road: 'Ruta / Road', gravel: 'Gravel' };
+      const currentDisc = getPageDiscipline() || data.discipline;
+      const discTag = discLabels[currentDisc] ? ` para ${discLabels[currentDisc]}` : '';
+      const displayDesc = data.desc ? ` (${data.desc})` : '';
+
       // Mostrar banner con talla recomendada
       banner.innerHTML = `
         <div class="flex items-center justify-between gap-3 p-4 rounded-xl border border-[#10b981]/30 bg-[#10b981]/5 animate-fade-in">
@@ -2056,8 +2139,8 @@ document.addEventListener('click', (e) => {
               ${data.size}
             </div>
             <div>
-              <p class="text-xs font-semibold text-[#10b981] uppercase tracking-wider">Talla Biomecánica Recomendada</p>
-              <p class="text-xs text-ink-muted leading-tight">Basada en tu estatura y entrepierna.</p>
+              <p class="text-xs font-semibold text-[#10b981] uppercase tracking-wider">Talla Biomecánica Recomendada${discTag}</p>
+              <p class="text-xs text-ink-muted leading-tight">Marco ideal: <strong class="text-white">${data.size}${displayDesc}</strong> según tu biomecánica.</p>
             </div>
           </div>
           <button type="button" data-open-size-finder class="text-xs font-bold text-ink hover:text-[#10b981] transition-colors underline cursor-pointer shrink-0">

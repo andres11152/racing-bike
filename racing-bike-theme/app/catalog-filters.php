@@ -469,3 +469,96 @@ function rb_active_filter_chips(array $taxonomies): array
 
     return $chips;
 }
+
+/**
+ * Detecta inteligentemente la disciplina de una bicicleta o marco:
+ * 'mtb' (Montaña), 'road' (Ruta) o 'gravel' (Gravel).
+ *
+ * @param int|\WC_Product $product Objeto producto o ID
+ * @return string|null 'mtb'|'road'|'gravel' o null si no es bicicleta/marco
+ */
+function rb_get_product_discipline(int|\WC_Product $product): ?string
+{
+    if (is_numeric($product)) {
+        $product = wc_get_product($product);
+    }
+
+    if (! $product instanceof \WC_Product) {
+        return null;
+    }
+
+    $productId = $product->get_id();
+
+    // 1. Categorías de producto
+    $terms = wc_get_product_terms($productId, 'product_cat', ['fields' => 'slugs']);
+    if (! empty($terms) && ! is_wp_error($terms)) {
+        foreach ($terms as $slug) {
+            $slug = strtolower($slug);
+            if (str_contains($slug, 'gravel')) {
+                return 'gravel';
+            }
+            if ($slug === 'mtb' || str_contains($slug, 'mtb') || str_contains($slug, 'montana')) {
+                return 'mtb';
+            }
+            if ($slug === 'ruta' || str_contains($slug, 'ruta') || str_contains($slug, 'road')) {
+                return 'road';
+            }
+        }
+    }
+
+    // 2. Taxonomía pa_disciplina
+    if (taxonomy_exists('pa_disciplina')) {
+        $discTerms = wc_get_product_terms($productId, 'pa_disciplina', ['fields' => 'slugs']);
+        if (! empty($discTerms) && ! is_wp_error($discTerms)) {
+            foreach ($discTerms as $slug) {
+                $slug = strtolower($slug);
+                if (str_contains($slug, 'gravel')) {
+                    return 'gravel';
+                }
+                if (str_contains($slug, 'mtb') || str_contains($slug, 'montana')) {
+                    return 'mtb';
+                }
+                if (str_contains($slug, 'ruta') || str_contains($slug, 'road')) {
+                    return 'road';
+                }
+            }
+        }
+    }
+
+    // 3. Heurística por nombre de producto
+    $name = strtolower($product->get_name());
+    if (preg_match('/\b(gravel)\b/i', $name)) {
+        return 'gravel';
+    }
+    if (preg_match('/\b(mtb|mountain|monta[nñ]a|trail|cross[ -]?country|xc)\b/i', $name)) {
+        return 'mtb';
+    }
+    if (preg_match('/\b(ruta|road|carretera|aero)\b/i', $name)) {
+        return 'road';
+    }
+
+    // 4. Heurística por tallas de variaciones (pulgadas vs centímetros)
+    if ($product->is_type('variable')) {
+        $attributes = $product->get_variation_attributes();
+        $sizeOptions = $attributes['pa_talla'] ?? $attributes['talla'] ?? [];
+        $numericSizes = [];
+
+        foreach ($sizeOptions as $opt) {
+            if (is_numeric($opt)) {
+                $numericSizes[] = (float) $opt;
+            }
+        }
+
+        if (! empty($numericSizes)) {
+            $avgSize = array_sum($numericSizes) / count($numericSizes);
+            if ($avgSize < 30) {
+                return 'mtb';
+            }
+            if ($avgSize >= 40) {
+                return 'road';
+            }
+        }
+    }
+
+    return null;
+}

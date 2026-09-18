@@ -51,6 +51,8 @@
       // pertenencia a la categoría "Bicicletas" o a alguna de sus
       // subcategorías (Ruta, Gravel, Pista, etc.).
       $isBikeProduct = false;
+      $bikeDiscipline = function_exists('\\App\\rb_get_product_discipline') ? \App\rb_get_product_discipline($product) : null;
+
       $bikeCategoryTerm = get_term_by('slug', 'bicicletas', 'product_cat');
       if ($bikeCategoryTerm) {
         $bikeCategoryIds = array_merge(
@@ -60,12 +62,17 @@
         $productCategoryIds = wc_get_product_term_ids($product->get_id(), 'product_cat');
         $isBikeProduct = (bool) array_intersect($bikeCategoryIds, $productCategoryIds);
       }
+
+      if ($bikeDiscipline) {
+        $isBikeProduct = true;
+      }
     @endphp
 
     <div
       id="product-{{ $product->get_id() }}"
       {{ wc_product_class('', $product) }}
       data-rb-track-view="{{ wp_json_encode($trackViewData) }}"
+      data-bike-discipline="{{ $bikeDiscipline }}"
     >
       <div class="rb-container py-8 md:py-12">
         <x-breadcrumbs :items="$breadcrumbs" class="mb-8" />
@@ -134,7 +141,12 @@
             @endif
 
             @if ($isBikeProduct)
-              <div id="rb-size-recommendation-banner" class="mt-6"></div>
+              <div
+                id="rb-size-recommendation-banner"
+                class="mt-6"
+                data-bike-discipline="{{ $bikeDiscipline }}"
+                data-product-name="{{ esc_attr($product->get_name()) }}"
+              ></div>
             @endif
 
             <div class="rb-woo-add-to-cart mt-6">

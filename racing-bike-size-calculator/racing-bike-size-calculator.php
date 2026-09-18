@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Racing Bike Size Calculator
  * Description: Calculadora interactiva premium tipo modal para encontrar la talla ideal de bicicleta (Ruta, MTB, Gravel).
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Skycode Agency
  * License: GPL2
  */
@@ -17,14 +17,14 @@ function rb_size_calculator_register_assets() {
         'rb-size-calculator-css',
         plugins_url( 'assets/css/calculator.css', __FILE__ ),
         array(),
-        '1.0.6'
+        '1.0.7'
     );
 
     wp_enqueue_script(
         'rb-size-calculator-js',
         plugins_url( 'assets/js/calculator.js', __FILE__ ),
         array(),
-        '1.0.6',
+        '1.0.7',
         true
     );
 }
@@ -69,7 +69,12 @@ function rb_size_calculator_render_modal() {
           
           <!-- Disciplina -->
           <div class="rb-form-section">
-            <label class="rb-section-label">1. Disciplina de Ciclismo</label>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+              <label class="rb-section-label" style="margin-bottom: 0;">1. Disciplina de Ciclismo</label>
+              <span id="rb-detected-discipline-badge" style="display: none; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); padding: 3px 8px; border-radius: 9999px;">
+                ⚡ Detectada para esta bici
+              </span>
+            </div>
             <div class="rb-discipline-selector">
               <button type="button" class="rb-discipline-btn active" data-discipline="road">
                 <span class="rb-btn-emoji">🚴</span> Ruta / Road
