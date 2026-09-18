@@ -112,6 +112,23 @@ foreach ($ids as $id) {
     $r['linksHasExternals'] = (bool) preg_match('/<a[^>]+href=["\']https?:\/\/(?!(?:www\.)?racingbike\.com\.co)/i', $content);
     $r['linksNotAllExternals'] = $r['linksHasInternal'] || ! $r['linksHasExternals'];
     $r['lengthContent'] = $palabras >= 600;
+
+    // Faltaba esta prueba por completo: sin asignar $r['contentHasShortParagraphs'],
+    // !empty($r[$prueba]) la trataba como "falla" en TODOS los productos
+    // sin excepción (detectado al comparar contra
+    // scripts/seo-structure-descriptions.php, que sí la valida antes de
+    // escribir). Límite real: 120 palabras por <p> (ver
+    // assets/admin/js/analyzer.js — "120<e.wordCount").
+    $r['contentHasShortParagraphs'] = true;
+    if (preg_match_all('/<p[^>]*>(.*?)<\/p>/is', $content, $ps)) {
+        foreach ($ps[1] as $p) {
+            if (str_word_count(wp_strip_all_tags($p)) > 120) {
+                $r['contentHasShortParagraphs'] = false;
+                break;
+            }
+        }
+    }
+
     $r['titleHasNumber'] = (bool) preg_match('/\d/', $titulo);
 
     // Lista real de assets/vendor/powerwords/es.php del propio plugin
@@ -137,9 +154,10 @@ foreach ($ids as $id) {
     $r['hasProductSchema'] = true;  // Rank Math lo emite por plantilla para todos los productos
     $r['isReviewEnabled'] = (bool) $product->get_reviews_allowed();
 
-    // Densidad: 1%-2.5% es lo óptimo para Rank Math.
+    // Fórmula real de Rank Math: ocurrencias de la FRASE completa /
+    // palabras totales — sin multiplicar por el largo de la keyword.
     $ocurrencias = ($keyword !== '' && $palabras > 0) ? substr_count($contentPlano, $keyword) : 0;
-    $densidad = $palabras > 0 ? ($ocurrencias * str_word_count($keyword)) / $palabras * 100 : 0;
+    $densidad = $palabras > 0 ? $ocurrencias / $palabras * 100 : 0;
     $r['keywordDensity'] = $densidad >= 0.5 && $densidad <= 2.5;
 
     $puntos = 0;
