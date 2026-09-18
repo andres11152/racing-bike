@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Despliega el theme completo a producción: build de assets, sync de
 # archivos (por checksum, solo lo que cambió), y limpieza de caché de
-# vistas de Acorn. Reemplaza el `rsync` manual que se repetía a mano en
-# cada cambio — un solo comando, mismo resultado siempre.
+# vistas de Acorn + caché de página de LiteSpeed. Reemplaza el `rsync`
+# manual que se repetía a mano en cada cambio — un solo comando, mismo
+# resultado siempre.
 #
 # Uso: deploy/deploy-theme.sh
 
@@ -19,8 +20,11 @@ rsync -avz --checksum -e "ssh -i $SSH_KEY -p $SSH_PORT" \
   racing-bike-theme/ \
   "$SSH_USER@$SSH_HOST:~/$REMOTE_WP_ROOT/wp-content/themes/racing-bike-theme/"
 
-echo "3/3 Limpiando caché de vistas..."
+echo "3/4 Limpiando caché de vistas..."
 clear_acorn_view_cache
+
+echo "4/4 Purgando caché de página (LiteSpeed)..."
+purge_litespeed_cache
 
 echo ""
 echo "Theme desplegado."

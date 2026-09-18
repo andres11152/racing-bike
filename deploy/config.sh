@@ -29,3 +29,15 @@ rsync_to_prod() {
 clear_acorn_view_cache() {
   ssh_prod "rm -f ~/$REMOTE_WP_ROOT/wp-content/cache/acorn/framework/views/*.php" || true
 }
+
+# Limpia el caché de PÁGINA COMPLETA de LiteSpeed Cache — distinto del de
+# vistas de Acorn de arriba. Detectado el 2026-09-17: tras desplegar el
+# rediseño del filtro de precio, /tienda/ seguía sirviendo el HTML viejo
+# (dos <input type="number"> en vez del slider) durante varios minutos
+# porque LiteSpeed ya tenía esa página en caché desde antes del deploy, y
+# clear_acorn_view_cache solo limpia las plantillas Blade compiladas, no
+# el HTML final cacheado. Sin esto, cada cambio visible en el frontend
+# necesita una purga manual aparte para verse de inmediato.
+purge_litespeed_cache() {
+  ssh_prod "cd ~/$REMOTE_WP_ROOT && wp --skip-themes litespeed-purge all" || true
+}
