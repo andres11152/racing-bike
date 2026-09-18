@@ -24,6 +24,10 @@ if (! defined('ABSPATH')) { exit; }
 
 $detalle = in_array('detalle', $args ?? [], true);
 
+// Copia literal de assets/vendor/powerwords/es.php del plugin Rank Math
+// instalado (seo-by-rank-math), no una lista inventada.
+const RB_SEO_POWERWORDS_ES = ['increíble','asombroso','maravilloso','único','hermoso','felicidad','brillante','cautivador','carismático','impactante','claro','completamente','confidencial','confianza','significativo','creativo','definitivamente','delicioso','demostrar','apresúrate','decidido','digno','dinámico','impresionante','esencial','inspirador','innovador','intenso','eficaz','mágico','magnífico','histórico','importante','indispensable','inolvidable','irresistible','legendario','luminoso','lujo','majestuoso','memorable','milagroso','motivador','necesario','nuevo','oficial','perfecto','apasionado','persuasivo','fenomenal','placer','popular','poder','prestigioso','prodigioso','profundo','próspero','poderoso','calidad','radiante','rápido','exitoso','revolucionario','satisfecho','seguridad','sensacional','sereno','suntuoso','espléndido','sublime','sorprendente','talentoso','terrorífico','valor','vibrante','victorioso','vivo','verdaderamente','celoso','auténtico','aventurero','espectacular','exclusivo','garantizado','extraordinario','fabuloso','fascinante','formidable','genial','grandioso','gratuito','hábil','ilimitado','impecable','infalible','infinitamente','influyente','ingenioso','irremplazable','líder','maestro','notable','novedoso','pionero','reconocido','superior','triunfante','ultra','valiente','valioso','vanguardista','vigoroso','visionario','voluntad','vital','triunfo','glorioso','imparable','inigualable','inteligente','invencible','libertad','orgullo','paz','progreso','renovado','sabiduría','satisfacción','seguro','serenidad','superación','talento','transcendente','transformador','valentía','victoria'];
+
 // Pesos reales sacados de assets/admin/js/analyzer.js del plugin.
 const RB_SEO_PESOS = [
     'keywordInTitle'            => 38, // 38 en es / 36 en en — el más pesado con diferencia
@@ -47,7 +51,11 @@ const RB_SEO_PESOS = [
     'lengthContent'             => 2,
     'titleHasNumber'            => 1,
     'titleHasPowerWords'        => 1,
-    'titleSentiment'            => 1,
+    // titleSentiment NO está aquí a propósito: su propia condición
+    // isApplicable en el JS del plugin exige locale "en" — en un sitio
+    // en español Rank Math ni la evalúa ni la cuenta en el total
+    // posible, así que sumarla infla el "máximo" y hace ver el puntaje
+    // real más bajo de lo que Rank Math realmente reportaría.
 ];
 
 function rb_norm(string $s): string
@@ -81,7 +89,7 @@ foreach ($ids as $id) {
 
     // Título tal como lo renderiza la plantilla global de Rank Math.
     $plantilla = (string) get_post_meta($id, 'rank_math_title', true);
-    $titulo = rb_norm($plantilla !== '' ? $plantilla : $product->get_name() . ' - Comprar en Racing Bike 1998');
+    $titulo = rb_norm($plantilla !== '' ? $plantilla : $product->get_name() . ' - Tienda Oficial Racing Bike 1998');
     $descripcion = rb_norm((string) get_post_meta($id, 'rank_math_description', true));
     $slug = $product->get_slug();
 
@@ -105,8 +113,27 @@ foreach ($ids as $id) {
     $r['linksNotAllExternals'] = $r['linksHasInternal'] || ! $r['linksHasExternals'];
     $r['lengthContent'] = $palabras >= 600;
     $r['titleHasNumber'] = (bool) preg_match('/\d/', $titulo);
-    $r['titleHasPowerWords'] = (bool) preg_match('/\b(mejor|nuevo|nueva|gratis|exclusivo|premium|profesional|oficial|garantia|original|top|ultimate|definitivo)\b/u', $titulo);
-    $r['titleSentiment'] = (bool) preg_match('/\b(mejor|top|increible|excelente|perfecto|ideal|potente|ligero|rapido)\b/u', $titulo);
+
+    // Lista real de assets/vendor/powerwords/es.php del propio plugin
+    // (RB_SEO_POWERWORDS_ES, más abajo en este mismo archivo — inlineada
+    // para que el script siga siendo un solo archivo autocontenido, como
+    // el resto de scripts/*.php: run-prod-script.sh solo sube ESTE
+    // archivo al servidor, no una carpeta). Con acentos incluidos, así
+    // que se compara sobre el título SIN quitar tildes (rb_norm() ya las
+    // quita para las pruebas de keyword, pero esta se hace aparte con el
+    // texto original).
+    $tituloConTildes = mb_strtolower(wp_strip_all_tags($plantilla !== '' ? $plantilla : $product->get_name() . ' - Tienda Oficial Racing Bike 1998'));
+    $r['titleHasPowerWords'] = false;
+    foreach (RB_SEO_POWERWORDS_ES as $pw) {
+        if (str_contains($tituloConTildes, mb_strtolower($pw))) {
+            $r['titleHasPowerWords'] = true;
+            break;
+        }
+    }
+
+    // titleSentiment: no se evalúa (ver la nota en RB_SEO_PESOS), pero
+    // NO se marca como fallo — no cuenta ni a favor ni en contra.
+
     $r['hasProductSchema'] = true;  // Rank Math lo emite por plantilla para todos los productos
     $r['isReviewEnabled'] = (bool) $product->get_reviews_allowed();
 
