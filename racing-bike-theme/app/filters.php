@@ -543,3 +543,45 @@ add_action('template_redirect', function () {
     }
 });
 
+/**
+ * Renderiza el shortcode del feed de Instagram sin el bloque de cabecera
+ * (avatar + nombre de cuenta). Se pidió con showheader=false, pero el
+ * plugin (Instagram Feed by Smash Balloon) igual imprime ese bloque en
+ * el HTML —incluyendo un <img> del avatar sin atributo alt— y antes solo
+ * se ocultaba con CSS, así que seguía ahí para cualquier rastreador
+ * (Rank Math lo marcaba como imagen sin alt en el SEO Analyzer). Se
+ * quita el nodo del DOM en vez de solo ocultarlo.
+ */
+function rb_instagram_feed_shortcode(string $shortcode): string
+{
+    $html = do_shortcode($shortcode);
+
+    if ($html === '' || ! str_contains($html, 'sb_instagram_header')) {
+        return $html;
+    }
+
+    $previousLibxmlState = libxml_use_internal_errors(true);
+    $dom = new \DOMDocument();
+    $dom->loadHTML('<?xml encoding="utf-8" ?><div id="rb-instagram-feed-wrap">' . $html . '</div>');
+    libxml_clear_errors();
+    libxml_use_internal_errors($previousLibxmlState);
+
+    $xpath = new \DOMXPath($dom);
+    foreach ($xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " sb_instagram_header ")]') as $node) {
+        $node->parentNode?->removeChild($node);
+    }
+
+    $wrap = $dom->getElementById('rb-instagram-feed-wrap');
+
+    if (! $wrap) {
+        return $html;
+    }
+
+    $result = '';
+    foreach ($wrap->childNodes as $child) {
+        $result .= $dom->saveHTML($child);
+    }
+
+    return $result;
+}
+

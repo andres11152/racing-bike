@@ -32,8 +32,8 @@
     </div>
 
     {{-- Renderizado del Feed Oficial de Smash Balloon --}}
-    <div class="rb-instagram-official-feed [&_.sbi_header]:hidden [&_#sbi_load]:hidden [&_.sb_instagram_header]:hidden">
-      {!! do_shortcode('[instagram-feed showheader=false showbutton=false showfollow=false cols=6 num=6]') !!}
+    <div class="rb-instagram-official-feed [&_#sbi_load]:hidden">
+      {!! \App\rb_instagram_feed_shortcode('[instagram-feed showheader=false showbutton=false showfollow=false cols=6 num=6]') !!}
     </div>
   </div>
 </section>
