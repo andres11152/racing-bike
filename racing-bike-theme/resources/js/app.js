@@ -719,7 +719,15 @@ window.initSwatches = function() {
           // elegir un color con foto propia (ver
           // scripts/assign-variation-images.php) cambia la imagen
           // principal de la ficha, no solo el precio.
-          if (variation && variation.image && variation.image.full_src) {
+          //
+          // Salvo dentro del quick-view: ese modal se abre desde las
+          // tarjetas del catálogo Y desde los productos relacionados al
+          // pie de una ficha. En ese segundo caso elegir un color en el
+          // modal le cambiaba la foto al producto de la ficha que está
+          // detrás, que es otro producto distinto.
+          const isQuickView = !! form.closest('[data-quick-view-modal], [data-quick-view-target]');
+
+          if (! isQuickView && variation && variation.image && variation.image.full_src) {
             window.rbApplyVariationImage?.(variation.image.full_src, variation.image.alt);
           }
         });
@@ -729,7 +737,12 @@ window.initSwatches = function() {
             priceContainer.innerHTML = priceContainer.dataset.originalPrice;
           }
           if (labelEl) labelEl.textContent = baseLabelText;
-          window.rbClearVariationImage?.();
+
+          // Mismo motivo que en show_variation: un reset dentro del
+          // quick-view no debe tocar la galería de la ficha de fondo.
+          if (! form.closest('[data-quick-view-modal], [data-quick-view-target]')) {
+            window.rbClearVariationImage?.();
+          }
         });
       }
 
@@ -1416,6 +1429,11 @@ document.addEventListener('click', (e) => {
       mainImg.src = url;
       if (alt) mainImg.alt = alt;
       mainImg.dataset.full = url;
+      // Si el puntero estaba sobre la foto cuando se cambió de talla/color,
+      // el zoom de lupa seguía aplicado sobre la imagen nueva y se veía
+      // ampliada y descuadrada. La imagen nueva siempre entra sin zoom.
+      mainImg.style.transform = 'scale(1)';
+      mainImg.style.transformOrigin = 'center center';
     }
 
     if (lightboxImg && lightboxModal && !lightboxModal.classList.contains('hidden')) {
@@ -1475,8 +1493,12 @@ document.addEventListener('click', (e) => {
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
 
+      // 1.8x, no 2.2x: con object-contain la foto ya se ve completa, así
+      // que el zoom es para mirar un detalle, no para compensar un
+      // recorte. A 2.2x se perdía la referencia de qué parte se estaba
+      // mirando.
       mainImg.style.transformOrigin = `${x}% ${y}%`;
-      mainImg.style.transform = 'scale(2.2)';
+      mainImg.style.transform = 'scale(1.8)';
     });
 
     mainContainer.addEventListener('mouseleave', () => {
@@ -2373,3 +2395,222 @@ function initCatalogAjaxFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', initCatalogAjaxFilters);
+
+/* -------------------------------------------------------------------------
+ | Controles que existían en el markup pero no tenían quién los escuchara
+ |
+ | Auditoría del 2026-09-17: ambos son botones visibles, con estilos de
+ | hover y cursor pointer, que al pulsarlos no hacían absolutamente nada.
+ * ---------------------------------------------------------------------- */
+
+// 1. "Ver plan" del widget de financiación (ficha de producto). El modal
+//    completo con los planes de cuotas ya existía renderizado y oculto —
+//    simplemente no había forma de abrirlo.
+document.addEventListener('click', (event) => {
+  const openBtn = event.target.closest('[data-open-financing-modal]');
+  const closeBtn = event.target.closest('[data-close-financing-modal]');
+
+  if (openBtn) {
+    const modal = document.querySelector('[data-financing-modal]');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    modal.querySelector('[data-close-financing-modal]')?.focus();
+    return;
+  }
+
+  const modal = document.querySelector('[data-financing-modal]');
+  if (!modal || modal.classList.contains('hidden')) return;
+
+  // Cierre por botón o por clic en el fondo oscuro.
+  if (closeBtn || event.target === modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const modal = document.querySelector('[data-financing-modal]');
+  if (!modal || modal.classList.contains('hidden')) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  document.body.classList.remove('overflow-hidden');
+});
+
+// 2. Miniaturas del quick-view: cada uma trae en data-qv-thumb la URL de
+//    su foto en tamaño completo, pero nadie la leía, así que la imagen
+//    principal del modal nunca cambiaba. Delegado porque el contenido del
+//    quick-view se inyecta por AJAX después de cargar la página.
+document.addEventListener('click', (event) => {
+  const thumb = event.target.closest('[data-qv-thumb]');
+  if (!thumb) return;
+
+  const url = thumb.dataset.qvThumb;
+  const mainImage = document.getElementById('qv-main-image');
+  if (!url || !mainImage) return;
+
+  mainImage.src = url;
+
+  // Marca visual de cuál está activa (las clases replican las que el
+  // Blade pinta para la primera miniatura).
+  thumb.closest('[data-qv-thumbnails]')?.querySelectorAll('[data-qv-thumb]').forEach((other) => {
+    const isActive = other === thumb;
+    other.classList.toggle('border-white', isActive);
+    other.classList.toggle('ring-2', isActive);
+    other.classList.toggle('ring-white/20', isActive);
+    other.classList.toggle('border-line/60', !isActive);
+    other.classList.toggle('opacity-60', !isActive);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ | Mini galería de las tarjetas de producto (flechas, puntos y hover-flip)
+ |
+ | Vivía como un <script> inline DENTRO de product-card.blade.php, o sea
+ | que se duplicaba una vez por tarjeta renderizada: en la tienda con 24
+ | productos eran 24 copias idénticas del mismo código, cada una
+ | registrando sus 4 listeners sobre `document` — ~96 listeners haciendo
+ | exactamente lo mismo, y cada clic o cada movimiento del ratón sobre una
+ | tarjeta ejecutándose 24 veces.
+ |
+ | El código ya usaba delegación sobre `document`, así que moverlo aquí no
+ | cambia su comportamiento (incluidas las tarjetas que llegan por AJAX al
+ | filtrar el catálogo) — solo deja de repetirse.
+ * ---------------------------------------------------------------------- */
+
+document.addEventListener('click', (e) => {
+  if (!e.target || typeof e.target.closest !== 'function') return;
+  const dot = e.target.closest('[data-gallery-dot]');
+  const prev = e.target.closest('[data-gallery-prev]');
+  const next = e.target.closest('[data-gallery-next]');
+
+  if (!dot && !prev && !next) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const gallery = (dot || prev || next).closest('[data-card-gallery]');
+  if (!gallery) return;
+
+  // Marcar que el usuario interactuó para pausar el reset automático al salir
+  gallery.setAttribute('data-interacted', 'true');
+
+  const imgs = Array.from(gallery.querySelectorAll('[data-gallery-img]'));
+  const dots = Array.from(gallery.querySelectorAll('[data-gallery-dot]'));
+  if (!imgs.length) return;
+
+  let currentIndex = parseInt(gallery.getAttribute('data-active-index') || '0', 10);
+
+  if (dot) {
+    currentIndex = parseInt(dot.getAttribute('data-gallery-dot'), 10);
+  } else if (prev) {
+    currentIndex = (currentIndex - 1 + imgs.length) % imgs.length;
+  } else if (next) {
+    currentIndex = (currentIndex + 1) % imgs.length;
+  }
+
+  gallery.setAttribute('data-active-index', currentIndex);
+
+  imgs.forEach((img, idx) => {
+    if (idx === currentIndex) {
+      img.classList.remove('opacity-0');
+      img.classList.add('opacity-100');
+    } else {
+      img.classList.remove('opacity-100');
+      img.classList.add('opacity-0');
+    }
+  });
+
+  dots.forEach((d, idx) => {
+    d.setAttribute('data-active', idx === currentIndex ? 'true' : 'false');
+  });
+});
+
+// Hover sobre el dot: Cambiar de foto y marcar interacción
+document.addEventListener('mouseover', (e) => {
+  if (!e.target || typeof e.target.closest !== 'function') return;
+  const dot = e.target.closest('[data-gallery-dot]');
+  if (!dot) return;
+
+  const gallery = dot.closest('[data-card-gallery]');
+  if (!gallery) return;
+
+  gallery.setAttribute('data-interacted', 'true');
+
+  const imgs = Array.from(gallery.querySelectorAll('[data-gallery-img]'));
+  const dots = Array.from(gallery.querySelectorAll('[data-gallery-dot]'));
+  const targetIndex = parseInt(dot.getAttribute('data-gallery-dot'), 10);
+
+  gallery.setAttribute('data-active-index', targetIndex);
+
+  imgs.forEach((img, idx) => {
+    if (idx === targetIndex) {
+      img.classList.remove('opacity-0');
+      img.classList.add('opacity-100');
+    } else {
+      img.classList.remove('opacity-100');
+      img.classList.add('opacity-0');
+    }
+  });
+
+  dots.forEach((d, idx) => {
+    d.setAttribute('data-active', idx === targetIndex ? 'true' : 'false');
+  });
+});
+
+// Hover Flip: Mostrar segunda imagen al entrar y resetear al salir (si no hay interacción manual)
+document.addEventListener('mouseenter', (e) => {
+  if (!e.target || typeof e.target.closest !== 'function') return;
+  const gallery = e.target.closest('[data-card-gallery]');
+  if (!gallery) return;
+
+  if (gallery.getAttribute('data-interacted') === 'true') return;
+
+  const imgs = Array.from(gallery.querySelectorAll('[data-gallery-img]'));
+  const dots = Array.from(gallery.querySelectorAll('[data-gallery-dot]'));
+  if (imgs.length < 2) return;
+
+  // Cambiar a la segunda imagen (índice 1)
+  gallery.setAttribute('data-active-index', '1');
+  imgs[0].classList.remove('opacity-100');
+  imgs[0].classList.add('opacity-0');
+  imgs[1].classList.remove('opacity-0');
+  imgs[1].classList.add('opacity-100');
+
+  if (dots.length >= 2) {
+    dots[0].setAttribute('data-active', 'false');
+    dots[1].setAttribute('data-active', 'true');
+  }
+}, true);
+
+document.addEventListener('mouseleave', (e) => {
+  if (!e.target || typeof e.target.closest !== 'function') return;
+  const gallery = e.target.closest('[data-card-gallery]');
+  if (!gallery) return;
+
+  if (gallery.getAttribute('data-interacted') === 'true') return;
+
+  const imgs = Array.from(gallery.querySelectorAll('[data-gallery-img]'));
+  const dots = Array.from(gallery.querySelectorAll('[data-gallery-dot]'));
+  if (imgs.length < 2) return;
+
+  // Retornar a la primera imagen (índice 0)
+  gallery.setAttribute('data-active-index', '0');
+  imgs.forEach((img, idx) => {
+    if (idx === 0) {
+      img.classList.remove('opacity-0');
+      img.classList.add('opacity-100');
+    } else {
+      img.classList.remove('opacity-100');
+      img.classList.add('opacity-0');
+    }
+  });
+
+  dots.forEach((d, idx) => {
+    d.setAttribute('data-active', idx === 0 ? 'true' : 'false');
+  });
+}, true);
+  

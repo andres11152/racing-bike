@@ -58,7 +58,7 @@
             id="qv-main-image"
             src="{{ $mainImage }}"
             alt="{{ $mainImageAlt }}"
-            class="size-full object-cover object-center transition-all duration-500 group-hover:scale-105"
+            class="size-full object-contain p-3 transition-all duration-500 group-hover:scale-105"
           />
         @else
           <div class="flex size-full items-center justify-center text-ink-subtle">
@@ -95,7 +95,7 @@
               class="relative size-16 shrink-0 rounded-xl overflow-hidden border {{ $index === 0 ? 'border-white ring-2 ring-white/20' : 'border-line/60 opacity-60 hover:opacity-100' }} transition-all cursor-pointer"
               data-qv-thumb="{{ $img['full'] }}"
             >
-              <img src="{{ $img['thumb'] }}" alt="{{ $img['alt'] }}" class="size-full object-cover" />
+              <img src="{{ $img['thumb'] }}" alt="{{ $img['alt'] }}" class="size-full object-contain p-1" />
             </button>
           @endforeach
         </div>

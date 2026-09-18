@@ -42,7 +42,7 @@
             src="{{ $img['thumb'] }}"
             alt="{{ $img['alt'] }}"
             loading="lazy"
-            class="size-full object-cover"
+            class="size-full object-contain p-1"
           >
         </button>
       @endforeach
@@ -55,11 +55,21 @@
       class="relative aspect-4/5 md:aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-line group cursor-zoom-in shadow-2xl"
       data-gallery-main-container
     >
+      {{--
+        object-contain, no object-cover: las fotos del catálogo no tienen
+        una proporción uniforme (de 48 imágenes principales, 19 no son
+        cuadradas — hay apaisadas de 2.07:1 y verticales de 0.67:1). Con
+        object-cover, una foto apaisada dentro de este contenedor cuadrado
+        se recortaba tanto que la bicicleta aparecía ampliada y cortada; y
+        al cambiar de talla o color, la foto nueva saltaba a otro recorte
+        distinto. La caja de luz ya usaba object-contain, así que además
+        eran dos encuadres distintos para la misma foto.
+      --}}
       @if (! empty($images))
         <img
           src="{{ $images[0]['full'] }}"
           alt="{{ $images[0]['alt'] }}"
-          class="size-full object-cover transition-transform duration-200 ease-out origin-center"
+          class="size-full object-contain p-4 md:p-6 transition-transform duration-200 ease-out origin-center"
           fetchpriority="high"
           decoding="async"
           data-gallery-main-img
@@ -108,7 +118,7 @@
               src="{{ $img['thumb'] }}"
               alt="{{ $img['alt'] }}"
               loading="lazy"
-              class="size-full object-cover"
+              class="size-full object-contain p-1"
             >
           </button>
         @endforeach
