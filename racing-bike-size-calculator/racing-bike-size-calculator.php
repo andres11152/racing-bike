@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Racing Bike Size Calculator
  * Description: Calculadora interactiva premium tipo modal para encontrar la talla ideal de bicicleta (Ruta, MTB, Gravel).
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Skycode Agency
  * License: GPL2
  */
@@ -17,14 +17,14 @@ function rb_size_calculator_register_assets() {
         'rb-size-calculator-css',
         plugins_url( 'assets/css/calculator.css', __FILE__ ),
         array(),
-        '1.0.5'
+        '1.0.6'
     );
 
     wp_enqueue_script(
         'rb-size-calculator-js',
         plugins_url( 'assets/js/calculator.js', __FILE__ ),
         array(),
-        '1.0.5',
+        '1.0.6',
         true
     );
 }
