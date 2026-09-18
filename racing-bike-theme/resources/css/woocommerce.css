@@ -713,3 +713,98 @@ select:-webkit-autofill {
     color: #000 !important;
   }
 }
+
+/* -------------------------------------------------------------------------
+ | Filtro de precio del catálogo: slider doble
+ |
+ | Dos <input type="range"> superpuestos exactamente en el mismo lugar,
+ | cada uno "invisible" salvo su tirador (pointer-events: none en el input
+ | completo, pointer-events: auto solo en el pseudo-elemento del tirador),
+ | así se puede arrastrar cualquiera de los dos aunque ocupen el mismo
+ | espacio. El relleno verde entre ambos lo pinta [data-price-fill] con
+ | left/right en %, calculado en JS (initPriceSlider, en app.js).
+ * ---------------------------------------------------------------------- */
+
+.rb-range {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.rb-range::-webkit-slider-runnable-track {
+  appearance: none;
+  background: transparent;
+  height: 0.25rem;
+}
+
+.rb-range::-moz-range-track {
+  appearance: none;
+  background: transparent;
+  height: 0.25rem;
+  border: none;
+}
+
+.rb-range::-webkit-slider-thumb {
+  appearance: none;
+  pointer-events: auto;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: var(--color-brand-white);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 2px 6px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-top: 0;
+}
+
+.rb-range::-moz-range-thumb {
+  appearance: none;
+  pointer-events: auto;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: var(--color-brand-white);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 2px 6px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rb-range:hover::-webkit-slider-thumb,
+.rb-range:focus-visible::-webkit-slider-thumb,
+.rb-range:active::-webkit-slider-thumb {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.6);
+  cursor: grabbing;
+}
+
+.rb-range:hover::-moz-range-thumb,
+.rb-range:focus-visible::-moz-range-thumb,
+.rb-range:active::-moz-range-thumb {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.6);
+  cursor: grabbing;
+}
+
+.rb-range:focus-visible {
+  outline: none;
+}
+
+/* El tirador de "hasta" queda por encima: es el que más se toca al
+   acercar el rango al máximo, y si quedara debajo del de "desde" se
+   sentiría trabado justo ahí. */
+.rb-range[data-price-min-range] {
+  z-index: 1;
+}
+
+.rb-range[data-price-max-range] {
+  z-index: 2;
+}
