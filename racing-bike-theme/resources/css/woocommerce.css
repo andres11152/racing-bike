@@ -360,8 +360,24 @@ details.group > summary::marker {
   @apply hidden;
 }
 
+/*
+ * Descripción de la variación: oculta a propósito.
+ *
+ * WooCommerce la inyecta dentro del formulario, JUSTO ENCIMA del botón
+ * "Añadir al carrito", en cuanto se elige una talla. En este catálogo 199
+ * de 489 variaciones (10 productos) tienen copiada la descripción COMPLETA
+ * del producto — 1.000+ caracteres — en ese campo, así que elegir una talla
+ * empujaba el botón de compra fuera de la pantalla. Ninguna de esas
+ * descripciones aporta información propia de la talla: son copias del
+ * texto del producto, que ya se muestra en la sección "Descripción" más
+ * abajo (y en el quick-view sería todavía peor, es un modal pequeño).
+ *
+ * Ver scripts/clean-variation-descriptions.php para la limpieza del dato
+ * de origen; esta regla es la defensa para que vuelva a pasar si alguien
+ * pega texto largo ahí de nuevo desde el admin.
+ */
 .rb-woo-add-to-cart .woocommerce-variation-description {
-  @apply text-xs text-ink-muted my-2;
+  @apply hidden;
 }
 
 .rb-woo-add-to-cart .woocommerce-variation-availability {
