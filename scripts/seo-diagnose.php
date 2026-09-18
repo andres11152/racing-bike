@@ -62,6 +62,13 @@ function rb_norm(string $s): string
 {
     $s = mb_strtolower(wp_strip_all_tags($s));
     $s = strtr($s, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ñ'=>'n','ü'=>'u']);
+    // wptexturize() de WordPress convierte una "x" entre números en el
+    // signo de multiplicación "×" al renderizar (get_the_title(), y por
+    // lo tanto el <title> real que arma Rank Math) — este script compara
+    // contra $product->get_name(), que NO pasa por ese filtro y siempre
+    // trae "x" normal. Sin esto, una keyword que use "×" para coincidir
+    // con lo que de verdad se indexa saldría como falso negativo aquí.
+    $s = str_replace('×', 'x', $s);
 
     return trim(preg_replace('/\s+/u', ' ', $s));
 }
