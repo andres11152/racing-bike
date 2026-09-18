@@ -59,6 +59,31 @@ function initRbSizeCalculator() {
         }) || null;
     }
 
+    // Si el modal se abre desde la ficha de un producto, ese producto ya
+    // tiene sus propias tallas reales en pantalla (los swatches .rb-swatch,
+    // o si el navegador no corrió ese script, el <select> nativo de
+    // WooCommerce). Antes el resultado del modal siempre mostraba una talla
+    // "genérica" (la letra/número calculado en el vacío) sin relación con
+    // lo que el producto realmente vende — en un producto de 47 a 60 cm
+    // seguía hablando de XXS-XL. Esto lee esas opciones reales para que el
+    // resultado muestre y seleccione una talla que de verdad existe ahí.
+    function getRealProductSizeOptions() {
+        const swatches = [...document.querySelectorAll('.rb-swatch')];
+        if (swatches.length) {
+            return { items: swatches, getText: (s) => s.textContent || '' };
+        }
+
+        const selects = [...document.querySelectorAll('.variations select')];
+        for (const select of selects) {
+            const options = [...select.options].filter((opt) => opt.value !== '');
+            if (options.length) {
+                return { items: options, getText: (opt) => opt.textContent || opt.value };
+            }
+        }
+
+        return null;
+    }
+
     // Bloquea el scroll de fondo mientras el modal está abierto: en móvil,
     // sin esto la página detrás se movía junto con el gesto de scroll dentro
     // del modal (o directamente en vez de él).
@@ -244,8 +269,37 @@ function initRbSizeCalculator() {
 
         currentSizeLetter = letter;
         currentSizeNumeric = numericSize;
-        recSizeEl.textContent = `TALLA ${letter} (${frameSizeDesc})`;
-        recDescEl.textContent = longDesc;
+
+        // Si estamos en la ficha de un producto, mostrar y usar la talla
+        // REAL que ese producto vende (p.ej. "52 cm" en un Trek/Orbea de
+        // 47 a 60), no la talla genérica XXS-XL calculada en el vacío —
+        // antes el resultado del modal ignoraba por completo qué tallas
+        // tenía disponibles la página en la que se abrió.
+        let displaySizeLabel = `${letter} (${frameSizeDesc})`;
+        let matchedRealText = null;
+        let availableSizesText = '';
+
+        const pageOptions = getRealProductSizeOptions();
+        if (pageOptions) {
+            const matched = pickBestSizeOption(pageOptions.items, pageOptions.getText);
+            if (matched) {
+                matchedRealText = String(pageOptions.getText(matched)).trim();
+                const isNumericLabel = /^\d+([.,]\d+)?$/.test(matchedRealText);
+                const unit = selectedDiscipline === 'mtb' ? '"' : ' cm';
+                displaySizeLabel = isNumericLabel ? `${matchedRealText}${unit}` : matchedRealText;
+
+                if (isNumericLabel) {
+                    availableSizesText = pageOptions.items
+                        .map((item) => String(pageOptions.getText(item)).trim())
+                        .join(`${unit}, `) + unit;
+                }
+            }
+        }
+
+        recSizeEl.textContent = `TALLA ${displaySizeLabel}`;
+        recDescEl.textContent = matchedRealText
+            ? `Esta es la talla disponible más cercana a tu medida en este producto${availableSizesText ? ` (opciones: ${availableSizesText})` : ''}. ${longDesc}`
+            : longDesc;
 
         // Persistir la talla recomendada en localStorage y cookies. Se
         // guarda también el número (cm/pulgadas) además de la letra: los
@@ -260,13 +314,16 @@ function initRbSizeCalculator() {
         }));
         document.cookie = `rb_user_bike_size=${letter};path=/;max-age=31536000;SameSite=Lax`;
 
-        // Lanzar un evento global para actualizar componentes reactivos sin refrescar la página
+        // Lanzar un evento global para actualizar componentes reactivos sin
+        // refrescar la página — esto es lo que hace que el banner de la
+        // ficha de producto (app.js) seleccione en vivo el swatch real
+        // mientras se mueve el slider, no solo al pulsar "Aplicar".
         window.dispatchEvent(new CustomEvent('rb_size_calculated', {
             detail: { size: letter, numeric: numericSize, discipline: selectedDiscipline, desc: frameSizeDesc }
         }));
 
         if (applyBtn) {
-            applyBtn.textContent = `Seleccionar Talla ${letter} e ir a Comprar`;
+            applyBtn.textContent = `Seleccionar Talla ${displaySizeLabel} e ir a Comprar`;
         }
     }
 
