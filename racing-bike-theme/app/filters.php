@@ -287,7 +287,37 @@ add_action('wp_loaded', function () {
  * Handler AJAX para Quick-Add y Cross-Selling Addons en 1-Clic.
  */
 $quickAddHandler = function () {
-    check_ajax_referer('rb_cart_nonce', 'nonce');
+    // Asegurar que la sesión y el carrito de WooCommerce estén listos en peticiones AJAX
+    if (function_exists('WC')) {
+        if (null === WC()->session) {
+            $session_class = apply_filters('woocommerce_session_handler', 'WC_Session_Handler');
+            WC()->session = new $session_class();
+            WC()->session->init();
+        }
+        if (null === WC()->customer) {
+            WC()->customer = new \WC_Customer(get_current_user_id(), true);
+        }
+        if (null === WC()->cart) {
+            WC()->cart = new \WC_Cart();
+        }
+    }
+
+    // Validación segura de nonce que no rompa compras de páginas cacheadas por LiteSpeed
+    $nonce = $_REQUEST['nonce'] ?? $_REQUEST['_ajax_nonce'] ?? '';
+    $valid_nonce = $nonce && wp_verify_nonce($nonce, 'rb_cart_nonce');
+
+    if (! $valid_nonce) {
+        $referer = wp_get_raw_referer();
+        $site_host = wp_parse_url(home_url(), PHP_URL_HOST);
+        $referer_host = $referer ? wp_parse_url($referer, PHP_URL_HOST) : '';
+
+        // Bloquear únicamente peticiones externas sospechosas (CSRF real)
+        if (! $referer || ($referer_host && $referer_host !== $site_host)) {
+            wp_send_json_error([
+                'message' => __('Sesión no válida o petición externa bloqueada. Por favor recarga la página.', 'sage'),
+            ], 403);
+        }
+    }
 
     $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : (isset($_POST['add-to-cart']) ? absint($_POST['add-to-cart']) : 0);
     $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 1;

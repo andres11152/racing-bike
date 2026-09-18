@@ -960,12 +960,22 @@ document.addEventListener('click', (e) => {
   formData.append('action', 'rb_quick_add');
   formData.append('product_id', productId);
   formData.append('quantity', '1');
+  if (window.rbAjax?.nonce) {
+    formData.append('nonce', window.rbAjax.nonce);
+  }
 
   fetch(window.rbAjax?.url ?? '/wp-admin/admin-ajax.php', {
     method: 'POST',
     body: formData,
   })
-    .then((res) => res.json())
+    .then(async (res) => {
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, message: 'No se pudo agregar al carrito.' };
+      }
+    })
     .then((data) => {
       if (data.fragments) {
         Object.entries(data.fragments).forEach(([selector, html]) => {
@@ -1161,17 +1171,30 @@ document.addEventListener('submit', (e) => {
   // Si es producto variable y no se ha seleccionado talla, seleccionar automáticamente la primera disponible o alertar
   if (form.classList.contains('variations_form')) {
     const varInput = form.querySelector('input.variation_id, input[name="variation_id"]');
-    const select = form.querySelector('.variations select');
+    const selects = [...form.querySelectorAll('.variations select')];
 
-    if (select && !select.value) {
-      const firstSwatch = form.querySelector('.rb-swatch:not([disabled])');
-      if (firstSwatch) {
-        firstSwatch.click();
-      } else {
-        alert('Por favor selecciona una talla antes de añadir al carrito.');
-        form.dataset.submitting = 'false';
-        return;
+    // Verificar si hay selects sin valor seleccionado
+    const emptySelects = selects.filter((sel) => !sel.value);
+    if (emptySelects.length > 0) {
+      emptySelects.forEach((sel) => {
+        const row = sel.closest('tr') || sel.parentElement;
+        const firstSwatch = row ? row.querySelector('.rb-swatch:not([disabled])') : form.querySelector('.rb-swatch:not([disabled])');
+        if (firstSwatch) {
+          firstSwatch.click();
+        }
+      });
+    }
+
+    const stillEmpty = selects.filter((sel) => !sel.value);
+    if (stillEmpty.length > 0) {
+      alert('Por favor selecciona una talla antes de añadir al carrito.');
+      form.dataset.submitting = 'false';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.pointerEvents = '';
+        submitBtn.innerHTML = originalText;
       }
+      return;
     }
 
     // Sincronizar variation_id si viene en 0 o vacío
@@ -1214,6 +1237,9 @@ document.addEventListener('submit', (e) => {
 
   const formData = new FormData(form);
   formData.append('action', 'rb_quick_add');
+  if (window.rbAjax?.nonce) {
+    formData.append('nonce', window.rbAjax.nonce);
+  }
 
   // Asegurar que siempre viaje product_id
   if (!formData.has('product_id')) {
@@ -1242,8 +1268,22 @@ document.addEventListener('submit', (e) => {
     method: 'POST',
     body: formData,
   })
-    .then((res) => res.json())
+    .then(async (res) => {
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return {
+          success: false,
+          message: 'Hubo un inconveniente al procesar tu solicitud. Por favor intenta de nuevo.',
+        };
+      }
+    })
     .then((data) => {
+      if (!data || typeof data !== 'object') {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
       if (data.fragments) {
         Object.entries(data.fragments).forEach(([selector, html]) => {
           const el = document.querySelector(selector);
@@ -1282,6 +1322,7 @@ document.addEventListener('submit', (e) => {
     })
     .catch((err) => {
       console.error('Error al añadir al carrito:', err);
+      alert('Hubo un inconveniente de conexión al añadir al carrito. Por favor intenta de nuevo.');
     })
     .finally(() => {
       form.dataset.submitting = 'false';
