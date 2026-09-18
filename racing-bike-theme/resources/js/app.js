@@ -712,6 +712,16 @@ window.initSwatches = function() {
           if (variation && variation.price_html && priceContainer) {
             priceContainer.innerHTML = variation.price_html;
           }
+
+          // WooCommerce siempre manda `variation.image`, tenga la
+          // variación foto propia o no (si no tiene, es la del padre —
+          // aplicarla de todos modos no cambia nada a la vista). Así que
+          // elegir un color con foto propia (ver
+          // scripts/assign-variation-images.php) cambia la imagen
+          // principal de la ficha, no solo el precio.
+          if (variation && variation.image && variation.image.full_src) {
+            window.rbApplyVariationImage?.(variation.image.full_src, variation.image.alt);
+          }
         });
 
         window.jQuery(form).on('reset_data', () => {
@@ -719,6 +729,7 @@ window.initSwatches = function() {
             priceContainer.innerHTML = priceContainer.dataset.originalPrice;
           }
           if (labelEl) labelEl.textContent = baseLabelText;
+          window.rbClearVariationImage?.();
         });
       }
 
@@ -1388,6 +1399,39 @@ document.addEventListener('click', (e) => {
 
   let currentIndex = 0;
 
+  // Foto de la variación seleccionada (talla del marco/color), cuando
+  // difiere de las miniaturas de la galería del producto: WooCommerce
+  // dispara `show_variation` con la imagen de la variación (ver
+  // initSwatches, más abajo), pero esa imagen no tiene un índice dentro
+  // de `imageUrls` — es una foto aparte, no una miniatura más. Se guarda
+  // separado para que abrir la caja de luz mientras hay una variación
+  // seleccionada muestre esa foto y no la que tocaría por índice.
+  let variationOverrideUrl = null;
+
+  function applyVariationImage(url, alt) {
+    if (!url) return;
+    variationOverrideUrl = url;
+
+    if (mainImg) {
+      mainImg.src = url;
+      if (alt) mainImg.alt = alt;
+      mainImg.dataset.full = url;
+    }
+
+    if (lightboxImg && lightboxModal && !lightboxModal.classList.contains('hidden')) {
+      lightboxImg.src = url;
+    }
+  }
+
+  function clearVariationImage() {
+    if (!variationOverrideUrl) return;
+    variationOverrideUrl = null;
+    setActiveImage(currentIndex);
+  }
+
+  window.rbApplyVariationImage = applyVariationImage;
+  window.rbClearVariationImage = clearVariationImage;
+
   function setActiveImage(index) {
     if (!totalImages || index < 0 || index >= totalImages) return;
     currentIndex = index;
@@ -1418,6 +1462,7 @@ document.addEventListener('click', (e) => {
   allThumbs.forEach((thumb) => {
     thumb.addEventListener('click', () => {
       const idx = Number(thumb.dataset.index) || 0;
+      variationOverrideUrl = null; // navegar la galería a mano gana sobre la foto de variación
       setActiveImage(idx);
     });
   });
@@ -1449,7 +1494,14 @@ document.addEventListener('click', (e) => {
   // Apertura / Cierre de la Caja de Luz Modal
   function openLightbox() {
     if (!lightboxModal) return;
-    setActiveImage(currentIndex);
+
+    if (variationOverrideUrl && lightboxImg) {
+      lightboxImg.src = variationOverrideUrl;
+      if (lightboxCounter) lightboxCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
+    } else {
+      setActiveImage(currentIndex);
+    }
+
     lightboxModal.classList.remove('hidden');
     lightboxModal.classList.add('flex');
     document.body.style.overflow = 'hidden';
@@ -1470,11 +1522,13 @@ document.addEventListener('click', (e) => {
   });
 
   prevBtn?.addEventListener('click', () => {
+    variationOverrideUrl = null;
     const newIdx = (currentIndex - 1 + totalImages) % totalImages;
     setActiveImage(newIdx);
   });
 
   nextBtn?.addEventListener('click', () => {
+    variationOverrideUrl = null;
     const newIdx = (currentIndex + 1) % totalImages;
     setActiveImage(newIdx);
   });
