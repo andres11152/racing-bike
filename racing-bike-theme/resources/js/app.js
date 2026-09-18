@@ -1891,15 +1891,44 @@ document.addEventListener('click', (e) => {
     return null;
   }
 
-  function autoSelectSize(sizeLetter) {
+  // Algunos productos (bicicletas de ruta Trek/Orbea, MTB Zebra/Alligator/
+  // Monkey) no usan tallas por letra sino por número (cm de cuadro o
+  // pulgadas de MTB) — comparar solo contra sizeLetter nunca encontraba
+  // nada ahí. Si todas las opciones disponibles son numéricas, se elige la
+  // más cercana al número calculado; si no, se compara por letra como
+  // antes.
+  function pickBestSizeOption(items, getText, sizeLetter, sizeNumeric) {
+    if (!items.length) return null;
+
+    const numericItems = items
+      .map((item) => ({ item, num: parseFloat(String(getText(item)).trim().replace(',', '.')) }))
+      .filter(({ num }) => !Number.isNaN(num));
+
+    if (sizeNumeric != null && numericItems.length === items.length) {
+      let best = numericItems[0];
+      let bestDiff = Math.abs(best.num - sizeNumeric);
+      numericItems.forEach((candidate) => {
+        const diff = Math.abs(candidate.num - sizeNumeric);
+        if (diff < bestDiff) {
+          best = candidate;
+          bestDiff = diff;
+        }
+      });
+      return best.item;
+    }
+
+    return items.find((item) => {
+      const txt = String(getText(item)).trim().toUpperCase();
+      return txt === sizeLetter || txt.includes(sizeLetter);
+    }) || null;
+  }
+
+  function autoSelectSize(sizeLetter, sizeNumeric) {
     if (!sizeLetter) return;
-    
+
     // 1. Buscar en Swatches / Botones visuales si existen
     const swatches = [...document.querySelectorAll('.rb-swatch')];
-    let matchedSwatch = swatches.find(s => {
-      const txt = (s.textContent || '').trim().toUpperCase();
-      return txt === sizeLetter || txt.includes(sizeLetter);
-    });
+    const matchedSwatch = pickBestSizeOption(swatches, (s) => s.textContent || '', sizeLetter, sizeNumeric);
 
     if (matchedSwatch) {
       if (matchedSwatch.dataset.selected !== 'true') {
@@ -1909,7 +1938,8 @@ document.addEventListener('click', (e) => {
       // 2. Fallback: Selector estándar de WooCommerce
       const selects = document.querySelectorAll('.variations select');
       selects.forEach(select => {
-        const option = [...select.options].find(opt => opt.value.toUpperCase().includes(sizeLetter));
+        const options = [...select.options].filter((opt) => opt.value !== '');
+        const option = pickBestSizeOption(options, (opt) => opt.textContent || opt.value, sizeLetter, sizeNumeric);
         if (option && select.value !== option.value) {
           select.value = option.value;
           select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1940,7 +1970,7 @@ document.addEventListener('click', (e) => {
       `;
       
       if (shouldAutoSelect) {
-        autoSelectSize(data.size);
+        autoSelectSize(data.size, data.numeric);
       }
     } else {
       // Mostrar llamada a la acción para calcular talla

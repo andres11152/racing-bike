@@ -18,6 +18,46 @@ function initRbSizeCalculator() {
     // Current state
     let selectedDiscipline = 'road';
     let currentSizeLetter = 'M';
+    let currentSizeNumeric = null;
+
+    // Algunos productos (bicicletas de ruta Trek/Orbea, MTB Zebra/Alligator/
+    // Monkey) no usan tallas por letra (XS/S/M/L) sino por número: cm de
+    // cuadro en ruta/gravel (44-62) o pulgadas en MTB (13-19). El cálculo ya
+    // arma ese número (variable `cm`/`inches` más abajo); antes solo se
+    // usaba para el texto mostrado y se descartaba para elegir/aplicar la
+    // talla, así que en esos productos nunca se encontraba una opción que
+    // coincidiera con la letra. Esta función intenta primero una
+    // coincidencia numérica exacta o más cercana entre las opciones
+    // disponibles, y solo si ninguna opción es numérica cae a comparar por
+    // letra como antes.
+    function pickBestSizeOption(items, getText) {
+        if (!items.length) return null;
+
+        const numericItems = items
+            .map((item) => ({ item, num: parseFloat(String(getText(item)).trim().replace(',', '.')) }))
+            .filter(({ num }) => !Number.isNaN(num));
+
+        // Solo se confía en la coincidencia numérica si TODAS las opciones
+        // del producto son números — si hay una mezcla (no debería pasar,
+        // pero por seguridad) se prefiere el criterio de letra de siempre.
+        if (currentSizeNumeric != null && numericItems.length === items.length) {
+            let best = numericItems[0];
+            let bestDiff = Math.abs(best.num - currentSizeNumeric);
+            numericItems.forEach((candidate) => {
+                const diff = Math.abs(candidate.num - currentSizeNumeric);
+                if (diff < bestDiff) {
+                    best = candidate;
+                    bestDiff = diff;
+                }
+            });
+            return best.item;
+        }
+
+        return items.find((item) => {
+            const txt = String(getText(item)).trim().toUpperCase();
+            return txt === currentSizeLetter || txt.includes(currentSizeLetter);
+        }) || null;
+    }
 
     // Bloquea el scroll de fondo mientras el modal está abierto: en móvil,
     // sin esto la página detrás se movía junto con el gesto de scroll dentro
@@ -33,22 +73,23 @@ function initRbSizeCalculator() {
         document.body.style.overflow = '';
     }
 
-    // Show/hide Modal listeners
-    const openTriggers = document.querySelectorAll('[data-open-size-finder]');
-    openTriggers.forEach(trigger => {
-        trigger.addEventListener('click', (e) => {
+    // Show/hide Modal listeners.
+    //
+    // Delegado en document en vez de enganchar cada [data-open-size-finder]
+    // por separado: el banner de recomendación de app.js reemplaza su botón
+    // con banner.innerHTML cada vez que se recalcula una talla (para pasar
+    // de "Calcular talla" a "Recalcular"), y ese botón nuevo nunca había
+    // tenido el listener — por eso el modal abría la primera vez y dejaba
+    // de abrir después. Con delegación no importa cuándo se creó el botón.
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-open-size-finder]')) {
             e.preventDefault();
             openModal();
-        });
-    });
-
-    const closeTriggers = modal.querySelectorAll('[data-close-size-finder]');
-    closeTriggers.forEach(trigger => {
-        trigger.addEventListener('click', closeModal);
+        }
     });
 
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
+        if (e.target === modal || e.target.closest('[data-close-size-finder]')) {
             closeModal();
         }
     });
@@ -119,9 +160,12 @@ function initRbSizeCalculator() {
         // El catálogo en Colombia sólo se fabrica/importa de XS a L — no hay
         // 2XS, XL ni 2XL, así que el resultado se acota a ese rango en vez
         // de recomendar una talla que no existe para comprar.
+        let numericSize = null;
+
         if (selectedDiscipline === 'road') {
             const cm = Math.round(inseam * 0.67);
             frameSizeDesc = `${cm} cm`;
+            numericSize = cm;
 
             if (cm < 52) {
                 letter = 'XS';
@@ -139,6 +183,7 @@ function initRbSizeCalculator() {
         } else if (selectedDiscipline === 'mtb') {
             const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
             frameSizeDesc = `${inches}"`;
+            numericSize = inches;
 
             if (inches < 15) {
                 letter = 'XS';
@@ -156,6 +201,7 @@ function initRbSizeCalculator() {
         } else { // Gravel
             const cm = Math.round(inseam * 0.63);
             frameSizeDesc = `${cm} cm`;
+            numericSize = cm;
 
             if (cm < 50) {
                 letter = 'XS';
@@ -173,21 +219,26 @@ function initRbSizeCalculator() {
         }
 
         currentSizeLetter = letter;
+        currentSizeNumeric = numericSize;
         recSizeEl.textContent = `TALLA ${letter} (${frameSizeDesc})`;
         recDescEl.textContent = longDesc;
 
-        // Persistir la talla recomendada en localStorage y cookies
+        // Persistir la talla recomendada en localStorage y cookies. Se
+        // guarda también el número (cm/pulgadas) además de la letra: los
+        // productos con tallas numéricas (Trek/Orbea en ruta, algunas MTB)
+        // se seleccionan por ese número, no por la letra.
         localStorage.setItem('rb_user_bike_size', JSON.stringify({
             discipline: selectedDiscipline,
             size: letter,
+            numeric: numericSize,
             desc: frameSizeDesc,
             timestamp: Date.now()
         }));
         document.cookie = `rb_user_bike_size=${letter};path=/;max-age=31536000;SameSite=Lax`;
 
         // Lanzar un evento global para actualizar componentes reactivos sin refrescar la página
-        window.dispatchEvent(new CustomEvent('rb_size_calculated', { 
-            detail: { size: letter, discipline: selectedDiscipline, desc: frameSizeDesc } 
+        window.dispatchEvent(new CustomEvent('rb_size_calculated', {
+            detail: { size: letter, numeric: numericSize, discipline: selectedDiscipline, desc: frameSizeDesc }
         }));
 
         if (applyBtn) {
@@ -200,12 +251,11 @@ function initRbSizeCalculator() {
         applyBtn.addEventListener('click', () => {
             closeModal();
 
-            // Find swatch and click it
+            // Buscar swatch: coincidencia numérica más cercana si el
+            // producto usa tallas por número (Trek/Orbea en ruta, algunas
+            // MTB), o por letra si no.
             const swatches = [...document.querySelectorAll('.rb-swatch')];
-            let matchedSwatch = swatches.find(s => {
-                const txt = (s.textContent || '').trim().toUpperCase();
-                return txt === currentSizeLetter || txt.includes(currentSizeLetter);
-            });
+            const matchedSwatch = pickBestSizeOption(swatches, (s) => s.textContent || '');
 
             if (matchedSwatch) {
                 matchedSwatch.click();
@@ -214,7 +264,8 @@ function initRbSizeCalculator() {
                 const selects = document.querySelectorAll('.variations select');
                 let foundOption = false;
                 selects.forEach(select => {
-                    const option = [...select.options].find(opt => opt.value.toUpperCase().includes(currentSizeLetter));
+                    const options = [...select.options].filter((opt) => opt.value !== '');
+                    const option = pickBestSizeOption(options, (opt) => opt.textContent || opt.value);
                     if (option) {
                         select.value = option.value;
                         select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -222,11 +273,14 @@ function initRbSizeCalculator() {
                     }
                 });
 
-                // If no product option found, redirect to shop with filter
+                // If no product option found, redirect to shop with filter.
+                // El filtro real del catálogo es "filter_talla" (taxonomía
+                // pa_talla) — "filter_talla-cuadro" no tiene ningún producto
+                // asignado (pa_talla-cuadro quedó sin uso tras la migración
+                // de tallas a pa_talla) y nunca filtraba nada.
                 if (!foundOption) {
-                    // El filtro real del catálogo es "filter_talla-cuadro" (taxonomía
-                    // pa_talla-cuadro); "filter_size" no existe y no filtraba nada.
-                    window.location.href = `/tienda/?filter_talla-cuadro=${currentSizeLetter.toLowerCase()}`;
+                    const filterValue = currentSizeNumeric != null ? currentSizeNumeric : currentSizeLetter.toLowerCase();
+                    window.location.href = `/tienda/?filter_talla=${filterValue}`;
                 }
             }
         });
