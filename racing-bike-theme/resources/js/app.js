@@ -2292,7 +2292,7 @@ document.addEventListener('click', (e) => {
 })();
 
 /* -------------------------------------------------------------------------
- | Modal de Búsqueda Global (Search Overlay)
+ | Modal de Búsqueda Global Enterprise (Live AJAX Search & Shortcuts)
  * ---------------------------------------------------------------------- */
 (function initSearchOverlay() {
   const overlay = document.querySelector('[data-search-overlay]');
@@ -2300,22 +2300,438 @@ document.addEventListener('click', (e) => {
 
   const triggerBtns = document.querySelectorAll('[data-search-trigger]');
   const closeBtns = overlay.querySelectorAll('[data-search-close]');
+  const form = overlay.querySelector('[data-search-form]');
   const input = overlay.querySelector('[data-search-input]');
+  const spinner = overlay.querySelector('[data-search-spinner]');
+  const clearBtn = overlay.querySelector('[data-search-clear]');
+  
+  const defaultView = overlay.querySelector('[data-search-default-view]');
+  const resultsView = overlay.querySelector('[data-search-results-view]');
 
-  // Mismo tratamiento de foco que initDrawer y el modal de vista rápida:
-  // fuera del árbol de accesibilidad al cerrar, foco restaurado, Tab
-  // atrapado dentro mientras está abierto.
+  const recentContainer = overlay.querySelector('[data-search-recent-container]');
+  const recentList = overlay.querySelector('[data-search-recent-list]');
+  const clearRecentBtn = overlay.querySelector('[data-search-clear-recent]');
+
+  const popularTags = overlay.querySelectorAll('[data-search-popular-tag]');
+  const taxonomiesContainer = overlay.querySelector('[data-search-taxonomies]');
+  const categoriesList = overlay.querySelector('[data-search-categories-list]');
+  const productsList = overlay.querySelector('[data-search-products-list]');
+  const countLabel = overlay.querySelector('[data-search-count-label]');
+  const totalCount = overlay.querySelector('[data-search-total-count]');
+  const allContainer = overlay.querySelector('[data-search-all-container]');
+  const allLink = overlay.querySelector('[data-search-all-link]');
+  const allText = overlay.querySelector('[data-search-all-text]');
+  const emptyState = overlay.querySelector('[data-search-empty-state]');
+  const emptyTitle = overlay.querySelector('[data-search-empty-title]');
+
   overlay.inert = true;
   let lastFocused = null;
+  let debounceTimer = null;
+  let abortCtrl = null;
+  let selectedIndex = -1;
+  const searchCache = new Map();
+  const STORAGE_KEY = 'rb_recent_searches';
 
+  /* --- Funciones de Historial Reciente (localStorage) --- */
+  function getRecentSearches() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveRecentSearch(term) {
+    if (!term || typeof term !== 'string') return;
+    const clean = term.trim();
+    if (clean.length < 2) return;
+
+    let recents = getRecentSearches();
+    recents = recents.filter(item => item.toLowerCase() !== clean.toLowerCase());
+    recents.unshift(clean);
+    recents = recents.slice(0, 6);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recents));
+    } catch {
+      // Ignorar errores de almacenamiento
+    }
+    renderRecentSearches();
+  }
+
+  function removeRecentSearch(term) {
+    let recents = getRecentSearches();
+    recents = recents.filter(item => item.toLowerCase() !== term.toLowerCase());
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recents));
+    } catch {}
+    renderRecentSearches();
+  }
+
+  function clearAllRecentSearches() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    renderRecentSearches();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function highlightMatch(text, query) {
+    if (!text || !query) return escapeHtml(text || '');
+    const cleanQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!cleanQuery) return escapeHtml(text);
+    const regex = new RegExp(`(${cleanQuery})`, 'gi');
+    return escapeHtml(text).replace(regex, '<mark class="bg-transparent text-emerald-400 font-bold underline decoration-emerald-500/40">$1</mark>');
+  }
+
+  function renderRecentSearches() {
+    if (!recentContainer || !recentList) return;
+    const recents = getRecentSearches();
+
+    if (recents.length === 0) {
+      recentContainer.classList.add('hidden');
+      recentList.innerHTML = '';
+      return;
+    }
+
+    recentContainer.classList.remove('hidden');
+    recentList.innerHTML = recents.map(item => {
+      const escaped = escapeHtml(item);
+      return `
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14161E] border border-white/10 text-xs text-white group shadow-sm">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
+            data-recent-apply="${escaped}"
+          >
+            <svg class="size-3 text-ink-subtle group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>${escaped}</span>
+          </button>
+          <button
+            type="button"
+            class="text-ink-subtle hover:text-white p-0.5 ml-1 transition-colors cursor-pointer"
+            data-recent-remove="${escaped}"
+            aria-label="Eliminar ${escaped}"
+          >
+            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Listeners de tags recientes
+    recentList.querySelectorAll('[data-recent-apply]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-recent-apply');
+        if (input && val) {
+          input.value = val;
+          executeLiveSearch(val);
+          input.focus();
+        }
+      });
+    });
+
+    recentList.querySelectorAll('[data-recent-remove]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = btn.getAttribute('data-recent-remove');
+        if (val) removeRecentSearch(val);
+      });
+    });
+  }
+
+  if (clearRecentBtn) {
+    clearRecentBtn.addEventListener('click', clearAllRecentSearches);
+  }
+
+  /* --- Control de Vistas y Renderizado de Búsqueda Predictiva --- */
+  function showDefaultView() {
+    if (resultsView) resultsView.classList.add('hidden');
+    if (defaultView) defaultView.classList.remove('hidden');
+    if (spinner) spinner.classList.add('hidden');
+    selectedIndex = -1;
+  }
+
+  function showResultsView() {
+    if (defaultView) defaultView.classList.add('hidden');
+    if (resultsView) resultsView.classList.remove('hidden');
+    selectedIndex = -1;
+  }
+
+  function renderSearchResults(data, query) {
+    if (!data) return;
+
+    showResultsView();
+    const products = Array.isArray(data.products) ? data.products : [];
+    const categories = Array.isArray(data.categories) ? data.categories : [];
+    const brands = Array.isArray(data.brands) ? data.brands : [];
+
+    // Categorías y Marcas
+    if (taxonomiesContainer && categoriesList) {
+      const taxonomyItems = [];
+      categories.forEach(cat => {
+        taxonomyItems.push(`
+          <a
+            href="${cat.url}"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#14161F] hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/30 text-[11px] text-white transition-all shadow-sm"
+          >
+            <span>📁 ${escapeHtml(cat.name)}</span>
+            <span class="text-[9px] text-ink-subtle">(${cat.count})</span>
+          </a>
+        `);
+      });
+
+      brands.forEach(br => {
+        taxonomyItems.push(`
+          <a
+            href="${br.url}"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#14161F] hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/30 text-[11px] text-white transition-all shadow-sm"
+          >
+            <span>🏷️ ${escapeHtml(br.name)}</span>
+          </a>
+        `);
+      });
+
+      if (taxonomyItems.length > 0) {
+        categoriesList.innerHTML = taxonomyItems.join('');
+        taxonomiesContainer.classList.remove('hidden');
+        taxonomiesContainer.classList.add('flex');
+      } else {
+        taxonomiesContainer.classList.add('hidden');
+        taxonomiesContainer.classList.remove('flex');
+      }
+    }
+
+    // Lista de Productos o Estado Vacío
+    if (products.length === 0) {
+      if (productsList) productsList.innerHTML = '';
+      if (allContainer) allContainer.classList.add('hidden');
+      if (emptyState) {
+        emptyState.classList.remove('hidden');
+        if (emptyTitle) {
+          emptyTitle.textContent = `No encontramos productos para "${query}"`;
+        }
+      }
+      if (countLabel) countLabel.textContent = 'Sin resultados';
+      if (totalCount) totalCount.textContent = '0 productos';
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+    if (countLabel) countLabel.textContent = `Productos sugeridos (${products.length})`;
+    if (totalCount) totalCount.textContent = `${data.total || products.length} encontrados`;
+
+    // Tarjetas de productos de alta fidelidad
+    if (productsList) {
+      productsList.innerHTML = products.map((p, idx) => {
+        const titleHighlighted = highlightMatch(p.title, query);
+        const imgSrc = p.image || '/wp-content/uploads/woocommerce-placeholder.png';
+        const saleBadge = p.on_sale ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Oferta</span>` : '';
+        const outOfStock = !p.in_stock ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-500/20 text-red-300 border border-red-500/30">Agotado</span>` : '';
+        const categoryBadge = p.category ? `<span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 truncate max-w-[150px]">${escapeHtml(p.category)}</span>` : '';
+
+        return `
+          <a
+            href="${p.url}"
+            class="flex items-center gap-3.5 p-2.5 rounded-2xl bg-[#14161F]/70 hover:bg-white/[0.08] focus:bg-white/[0.08] border border-white/5 hover:border-emerald-500/40 focus:border-emerald-500/40 transition-all group cursor-pointer outline-none shadow-sm"
+            data-search-result-item
+            data-index="${idx}"
+            tabindex="0"
+            role="option"
+          >
+            <img
+              src="${imgSrc}"
+              alt="${escapeHtml(p.title)}"
+              class="size-14 rounded-xl object-cover bg-black/40 border border-white/10 shrink-0 group-hover:scale-105 transition-transform"
+              loading="lazy"
+            >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-0.5">
+                ${categoryBadge}
+                ${saleBadge}
+                ${outOfStock}
+              </div>
+              <h5 class="text-xs md:text-sm font-semibold text-white truncate group-hover:text-emerald-300 transition-colors">
+                ${titleHighlighted}
+              </h5>
+              <div class="mt-0.5 text-xs text-ink-subtle font-medium">
+                ${p.price_html}
+              </div>
+            </div>
+            <div class="text-ink-subtle group-hover:text-emerald-400 group-focus:text-emerald-400 group-hover:translate-x-1 group-focus:translate-x-1 transition-all pr-1">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m8.25 5.25 6.75 6.75-6.75 6.75"/>
+              </svg>
+            </div>
+          </a>
+        `;
+      }).join('');
+
+      // Guardar en búsquedas recientes al hacer clic en un producto
+      productsList.querySelectorAll('[data-search-result-item]').forEach(item => {
+        item.addEventListener('click', () => {
+          saveRecentSearch(query);
+        });
+      });
+    }
+
+    // Botón de ver todos los resultados
+    if (allContainer && allLink) {
+      const allUrl = data.all_url || `/?s=${encodeURIComponent(query)}&post_type=product`;
+      allLink.href = allUrl;
+      allLink.addEventListener('click', () => {
+        saveRecentSearch(query);
+      });
+      if (allText) {
+        allText.textContent = `Ver todos los resultados para "${query}" (${data.total || products.length} productos)`;
+      }
+      allContainer.classList.remove('hidden');
+    }
+  }
+
+  /* --- Ejecución de Búsqueda Predictiva AJAX --- */
+  function executeLiveSearch(query) {
+    const clean = (query || '').trim();
+
+    if (clearBtn) {
+      if (clean.length > 0) {
+        clearBtn.classList.remove('hidden');
+        clearBtn.classList.add('flex');
+      } else {
+        clearBtn.classList.add('hidden');
+        clearBtn.classList.remove('flex');
+      }
+    }
+
+    if (clean.length < 2) {
+      if (abortCtrl) abortCtrl.abort();
+      showDefaultView();
+      return;
+    }
+
+    const cacheKey = clean.toLowerCase();
+    if (searchCache.has(cacheKey)) {
+      if (spinner) spinner.classList.add('hidden');
+      renderSearchResults(searchCache.get(cacheKey), clean);
+      return;
+    }
+
+    if (spinner) spinner.classList.remove('hidden');
+
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+
+    const ajaxUrl = window.rbAjax?.url || '/wp-admin/admin-ajax.php';
+    const targetUrl = `${ajaxUrl}?action=rb_live_search&q=${encodeURIComponent(clean)}`;
+
+    fetch(targetUrl, {
+      signal: abortCtrl.signal,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Network error');
+        return res.json();
+      })
+      .then(json => {
+        if (spinner) spinner.classList.add('hidden');
+        if (json && json.success && json.data) {
+          searchCache.set(cacheKey, json.data);
+          renderSearchResults(json.data, clean);
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        if (spinner) spinner.classList.add('hidden');
+        console.warn('Error en búsqueda en vivo:', err);
+      });
+  }
+
+  /* --- Input Listeners & Debounce --- */
+  if (input) {
+    input.addEventListener('input', (e) => {
+      const val = e.target.value;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        executeLiveSearch(val);
+      }, 200);
+    });
+
+    // Tecla Enter en el formulario
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const val = input.value.trim();
+        if (val) {
+          saveRecentSearch(val);
+        }
+      });
+    }
+  }
+
+  // Botón Limpiar (X)
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      clearBtn.classList.add('hidden');
+      clearBtn.classList.remove('flex');
+      showDefaultView();
+    });
+  }
+
+  // Tags Populares / Tendencias (Click directo)
+  popularTags.forEach(tag => {
+    tag.addEventListener('click', () => {
+      const term = tag.getAttribute('data-search-popular-tag');
+      if (input && term) {
+        input.value = term;
+        saveRecentSearch(term);
+        executeLiveSearch(term);
+        input.focus();
+      }
+    });
+  });
+
+  /* --- Abrir y Cerrar Modal con Estados de Accesibilidad --- */
   function openSearch() {
     lastFocused = document.activeElement;
     overlay.inert = false;
     overlay.classList.remove('hidden');
     overlay.classList.add('flex');
     document.body.style.overflow = 'hidden';
+
+    renderRecentSearches();
+
+    // Auto-detectar término si la URL ya tiene ?s=
+    const currentParam = new URLSearchParams(window.location.search).get('s');
+    if (input) {
+      if (!input.value && currentParam) {
+        input.value = currentParam;
+        executeLiveSearch(currentParam);
+      } else if (input.value) {
+        executeLiveSearch(input.value);
+      } else {
+        showDefaultView();
+      }
+    }
+
     setTimeout(() => {
-      if (input) input.focus();
+      if (input) {
+        input.focus();
+        input.select();
+      }
     }, 100);
   }
 
@@ -2324,28 +2740,76 @@ document.addEventListener('click', (e) => {
     overlay.classList.remove('flex');
     overlay.inert = true;
     document.body.style.overflow = '';
+    selectedIndex = -1;
     lastFocused?.focus();
   }
 
   triggerBtns.forEach(btn => btn.addEventListener('click', openSearch));
   closeBtns.forEach(btn => btn.addEventListener('click', closeSearch));
 
-  // Cerrar al hacer clic en el backdrop
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
       closeSearch();
     }
   });
 
-  // Cerrar con Escape, y ciclar Tab dentro del overlay mientras está abierto
+  /* --- Navegación por Teclado y Atajos Globales (Cmd+K, /, Esc, Flechas) --- */
   document.addEventListener('keydown', (e) => {
-    if (overlay.classList.contains('hidden')) return;
+    const isOverlayOpen = !overlay.classList.contains('hidden');
+
+    // Atajo global Cmd+K o Ctrl+K para alternar el buscador
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (isOverlayOpen) {
+        closeSearch();
+      } else {
+        openSearch();
+      }
+      return;
+    }
+
+    // Atajo global tecla '/' para abrir el buscador si no estamos escribiendo en otro input
+    if (e.key === '/' && !isOverlayOpen) {
+      const active = document.activeElement;
+      const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+      if (!isInput) {
+        e.preventDefault();
+        openSearch();
+        return;
+      }
+    }
+
+    if (!isOverlayOpen) return;
 
     if (e.key === 'Escape') {
+      e.preventDefault();
       closeSearch();
       return;
     }
 
+    // Navegación con flechas arriba/abajo dentro de los resultados
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const items = Array.from(overlay.querySelectorAll('[data-search-result-item], [data-search-all-link]'));
+      if (items.length === 0) return;
+
+      e.preventDefault();
+
+      if (e.key === 'ArrowDown') {
+        selectedIndex = (selectedIndex + 1) % items.length;
+      } else if (e.key === 'ArrowUp') {
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      }
+
+      items.forEach((item, idx) => {
+        if (idx === selectedIndex) {
+          item.focus();
+          item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      });
+      return;
+    }
+
+    // Ciclar Tab dentro del modal
     if (e.key === 'Tab') {
       const focusable = getFocusable(overlay);
       if (!focusable.length) return;

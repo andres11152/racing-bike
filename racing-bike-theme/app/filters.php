@@ -481,6 +481,167 @@ add_action('wp_ajax_rb_quick_view', $quickViewHandler);
 add_action('wp_ajax_nopriv_rb_quick_view', $quickViewHandler);
 
 /**
+ * Priorizar coincidencias en el título en búsquedas de WooCommerce (Enterprise Search Relevance).
+ */
+add_filter('posts_orderby', function ($orderby, \WP_Query $query) {
+    if (! is_admin() && $query->is_main_query() && $query->is_search() && ($query->get('post_type') === 'product' || is_woocommerce() || (isset($_GET['post_type']) && $_GET['post_type'] === 'product'))) {
+        global $wpdb;
+        $search_term = $query->get('s');
+        if (! empty($search_term)) {
+            $escaped = esc_sql($wpdb->esc_like(trim($search_term)));
+            $relevance = "CASE 
+                WHEN {$wpdb->posts}.post_title LIKE '{$escaped}%' THEN 1
+                WHEN {$wpdb->posts}.post_title LIKE '% {$escaped}%' THEN 2
+                WHEN {$wpdb->posts}.post_title LIKE '%{$escaped}%' THEN 3
+                ELSE 4
+            END ASC";
+            
+            return empty($orderby) ? "{$relevance}, {$wpdb->posts}.post_date DESC" : "{$relevance}, {$orderby}";
+        }
+    }
+    return $orderby;
+}, 10, 2);
+
+/**
+ * AJAX Handler para búsqueda predictiva en vivo (Enterprise Live Search).
+ */
+$liveSearchHandler = function () {
+    $term = sanitize_text_field($_GET['q'] ?? $_POST['q'] ?? '');
+    $term = trim($term);
+
+    if (mb_strlen($term) < 2) {
+        wp_send_json_success([
+            'products' => [],
+            'categories' => [],
+            'brands' => [],
+            'total' => 0,
+            'term' => $term,
+            'all_url' => home_url('/?s=' . urlencode($term) . '&post_type=product'),
+        ]);
+    }
+
+    global $wpdb;
+    $escaped = esc_sql($wpdb->esc_like($term));
+
+    // Buscar productos ordenados por relevancia de título
+    $query_args = [
+        'post_type' => 'product',
+        'post_status' => 'publish',
+        'posts_per_page' => 8,
+        's' => $term,
+    ];
+
+    $orderFilter = function ($orderby) use ($wpdb, $escaped) {
+        return "CASE 
+            WHEN {$wpdb->posts}.post_title LIKE '{$escaped}%' THEN 1
+            WHEN {$wpdb->posts}.post_title LIKE '% {$escaped}%' THEN 2
+            WHEN {$wpdb->posts}.post_title LIKE '%{$escaped}%' THEN 3
+            ELSE 4
+        END ASC, {$wpdb->posts}.post_date DESC";
+    };
+
+    add_filter('posts_orderby', $orderFilter);
+    $query = new \WP_Query($query_args);
+    remove_filter('posts_orderby', $orderFilter);
+
+    $products = [];
+
+    foreach ($query->posts as $post) {
+        $product = wc_get_product($post->ID);
+        if (! $product || ! $product->is_visible()) {
+            continue;
+        }
+        if (str_contains(strtolower($product->get_name()), 'personalizada') || str_contains($product->get_slug(), 'personalizada')) {
+            continue;
+        }
+
+        $id = $product->get_id();
+        $thumb_id = $product->get_image_id();
+        $img_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'woocommerce_thumbnail') : '';
+        if (! $img_url) {
+            $img_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'thumbnail') : '';
+        }
+        if (! $img_url) {
+            $img_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'full') : wc_placeholder_img_src();
+        }
+
+        // Categoría principal
+        $terms = get_the_terms($id, 'product_cat');
+        $cat_name = '';
+        if ($terms && ! is_wp_error($terms)) {
+            $valid_terms = array_values(array_filter($terms, fn($t) => $t->slug !== 'sin-categorizar'));
+            if (! empty($valid_terms)) {
+                $cat_name = $valid_terms[0]->name;
+            } elseif (! empty($terms)) {
+                $cat_name = $terms[0]->name;
+            }
+        }
+
+        $products[] = [
+            'id' => $id,
+            'title' => $product->get_name(),
+            'url' => get_permalink($id),
+            'image' => $img_url,
+            'price_html' => $product->get_price_html(),
+            'on_sale' => $product->is_on_sale(),
+            'category' => $cat_name,
+            'in_stock' => $product->is_in_stock(),
+        ];
+    }
+
+    // Buscar categorías que coincidan
+    $categories = [];
+    $cat_terms = get_terms([
+        'taxonomy' => 'product_cat',
+        'name__like' => $term,
+        'hide_empty' => true,
+        'number' => 3,
+    ]);
+    if (! is_wp_error($cat_terms) && ! empty($cat_terms)) {
+        foreach ($cat_terms as $ct) {
+            if ($ct->slug === 'sin-categorizar') continue;
+            $categories[] = [
+                'name' => $ct->name,
+                'url' => get_term_link($ct),
+                'count' => (int) $ct->count,
+            ];
+        }
+    }
+
+    // Buscar marcas que coincidan
+    $brands = [];
+    foreach (['pa_marca', 'pa_brand'] as $brand_tax) {
+        if (taxonomy_exists($brand_tax)) {
+            $brand_terms = get_terms([
+                'taxonomy' => $brand_tax,
+                'name__like' => $term,
+                'hide_empty' => true,
+                'number' => 3,
+            ]);
+            if (! is_wp_error($brand_terms) && ! empty($brand_terms)) {
+                foreach ($brand_terms as $bt) {
+                    $brands[] = [
+                        'name' => $bt->name,
+                        'url' => home_url('/?s=' . urlencode($bt->name) . '&post_type=product'),
+                    ];
+                }
+            }
+        }
+    }
+
+    wp_send_json_success([
+        'products' => $products,
+        'categories' => $categories,
+        'brands' => $brands,
+        'total' => (int) $query->found_posts,
+        'term' => $term,
+        'all_url' => home_url('/?s=' . urlencode($term) . '&post_type=product'),
+    ]);
+};
+add_action('wp_ajax_rb_live_search', $liveSearchHandler);
+add_action('wp_ajax_nopriv_rb_live_search', $liveSearchHandler);
+
+/**
  * Optimización de campos de Checkout para Colombia:
  * - Código postal no requerido.
  * - Etiquetas claras y orden ergonómico.
