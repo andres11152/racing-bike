@@ -31,6 +31,39 @@
 namespace App;
 
 /**
+ * Taxonomías de atributo que arma el sidebar de filtros, en un solo
+ * lugar: filter-sidebar.blade.php (las opciones) y archive-product.blade.php
+ * (las chips de filtros activos) necesitan exactamente la misma lista, y
+ * tenerla duplicada en dos archivos es como se desincroniza sin que nadie
+ * lo note hasta que un filtro "desaparecido" sigue generando una chip.
+ *
+ * pa_grupo y pa_talla-cuadro no están: existen como vocabulario en
+ * WooCommerce > Atributos pero ningún producto los tiene asignados. La
+ * talla real vive en pa_talla (antes repartida entre esa taxonomía y un
+ * atributo de texto libre "talla"; ver scripts/migrate-custom-attributes.php).
+ *
+ * pa_disciplina y pa_material tampoco: auditoría de catálogo del
+ * 2026-09-17 mostró que solo 1 de 63 productos publicados tiene cada uno
+ * asignado (2%). Mostrar un filtro que vacía la tienda en el 98% de sus
+ * opciones es peor que no mostrarlo. Se reactivan cuando el catálogo
+ * tenga cobertura real (ver scripts/audit-catalog.php para medirla).
+ *
+ * El filtro de Color usa pa_color-familia (9 familias: Azul, Rojo...), no
+ * pa_color directo — pa_color tiene ~76 tonos exactos de fabricante
+ * ("Halo Silver - Tanzanite (Gloss)"), correctos para la ficha de
+ * producto pero inservibles como filtro. Ver
+ * scripts/migrate-color-families.php para el mapeo.
+ */
+function rb_filter_taxonomies(): array
+{
+    return [
+        'pa_marca' => __('Marca', 'sage'),
+        'pa_talla' => __('Talla', 'sage'),
+        'pa_color-familia' => __('Color', 'sage'),
+    ];
+}
+
+/**
  * Devuelve [slug_de_término => cantidad_de_productos] para una taxonomía
  * de filtro, contando solo dentro del contexto actual: la categoría o
  * etiqueta que se esté viendo (si aplica) más los filtros ya activos en
@@ -138,4 +171,107 @@ function rb_sort_size_terms(array $terms): array
     });
 
     return $terms;
+}
+
+/**
+ * Rango de precio ($min, $max) del contexto actual (categoría/etiqueta si
+ * aplica), para dimensionar el slider del filtro de precio. Ignora los
+ * productos a $0 — hoy son datos rotos (ver
+ * scripts/unpublish-broken-products.php), no un precio real de catálogo, y
+ * dejarían el slider empezando en $0 sin significado.
+ */
+function rb_catalog_price_bounds(): array
+{
+    global $wpdb;
+
+    $join = "INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = '_price'";
+    $where = "p.post_type = 'product' AND p.post_status = 'publish' AND pm.meta_value > 0";
+
+    $queriedObject = get_queried_object();
+    if ($queriedObject instanceof \WP_Term && in_array($queriedObject->taxonomy, ['product_cat', 'product_tag'], true)) {
+        $join .= " INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
+                   INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.term_id = " . (int) $queriedObject->term_id;
+    }
+
+    $row = $wpdb->get_row("SELECT MIN(pm.meta_value + 0) AS min_price, MAX(pm.meta_value + 0) AS max_price FROM {$wpdb->posts} p {$join} WHERE {$where}");
+
+    return [
+        'min' => $row && $row->min_price !== null ? (float) $row->min_price : 0,
+        'max' => $row && $row->max_price !== null ? (float) $row->max_price : 0,
+    ];
+}
+
+/**
+ * Chips de filtros activos (Marca: GW ✕, Talla: M ✕, Precio: $0–$500.000 ✕)
+ * para quitar uno a la vez sin pasar por "Limpiar todo". Antes la única
+ * forma de deshacer una sola selección era abrir el sidebar de nuevo y
+ * desmarcarla ahí, o borrar todos los filtros de un golpe.
+ */
+function rb_active_filter_chips(array $taxonomies): array
+{
+    $chips = [];
+    $currentUrl = preg_replace('#/page/\d+/?$#', '/', strtok($_SERVER['REQUEST_URI'] ?? '', '?'));
+
+    foreach ($taxonomies as $taxonomy => $label) {
+        $paramKey = 'filter_' . str_replace('pa_', '', $taxonomy);
+        $queryTypeKey = 'query_type_' . str_replace('pa_', '', $taxonomy);
+
+        if (empty($_GET[$paramKey])) {
+            continue;
+        }
+
+        $slugs = array_filter(explode(',', wp_unslash($_GET[$paramKey])));
+
+        foreach ($slugs as $slug) {
+            $term = get_term_by('slug', sanitize_title($slug), $taxonomy);
+
+            if (! $term) {
+                continue;
+            }
+
+            $remaining = array_values(array_diff($slugs, [$slug]));
+            $queryParams = $_GET;
+            unset($queryParams['paged']);
+
+            if ($remaining) {
+                $queryParams[$paramKey] = implode(',', $remaining);
+                $queryParams[$queryTypeKey] = 'or';
+            } else {
+                unset($queryParams[$paramKey], $queryParams[$queryTypeKey]);
+            }
+
+            $chips[] = [
+                'label' => $label . ': ' . $term->name,
+                'url' => $currentUrl . (! empty($queryParams) ? '?' . http_build_query($queryParams) : ''),
+            ];
+        }
+    }
+
+    if (! empty($_GET['min_price']) || ! empty($_GET['max_price'])) {
+        $queryParams = $_GET;
+        unset($queryParams['paged'], $queryParams['min_price'], $queryParams['max_price']);
+
+        $min = $_GET['min_price'] ?? null;
+        $max = $_GET['max_price'] ?? null;
+
+        // html_entity_decode además de strip_tags: wc_price() devuelve
+        // "&#36;&nbsp;1.000.000" — sin decodificar, Blade escapa el "&" al
+        // imprimir la chip y el visitante ve "&#36;" literal en vez de "$".
+        $formatPrice = static fn ($amount) => html_entity_decode(wp_strip_all_tags(wc_price($amount)), ENT_QUOTES);
+
+        if ($min && $max) {
+            $priceLabel = sprintf(__('Precio: %s – %s', 'sage'), $formatPrice($min), $formatPrice($max));
+        } elseif ($min) {
+            $priceLabel = sprintf(__('Precio: desde %s', 'sage'), $formatPrice($min));
+        } else {
+            $priceLabel = sprintf(__('Precio: hasta %s', 'sage'), $formatPrice($max));
+        }
+
+        $chips[] = [
+            'label' => $priceLabel,
+            'url' => $currentUrl . (! empty($queryParams) ? '?' . http_build_query($queryParams) : ''),
+        ];
+    }
+
+    return $chips;
 }

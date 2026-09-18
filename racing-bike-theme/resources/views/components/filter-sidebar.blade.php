@@ -4,29 +4,10 @@
 ])
 
 @php
-  // pa_grupo y pa_talla-cuadro se quitaron de aquí: existen como vocabulario
-  // en WooCommerce > Atributos pero ningún producto los tiene asignados —
-  // mostrarlos solo agregaría secciones vacías. La talla real vive en
-  // pa_talla (antes repartida entre esa taxonomía y un atributo de texto
-  // libre "talla"; ver scripts/migrate-custom-attributes.php).
-  //
-  // pa_disciplina y pa_material se quitaron por el mismo motivo el
-  // 2026-09-17: auditoría de catálogo mostró que solo 1 de 63 productos
-  // publicados tiene cada uno asignado (2%). Mostrar un filtro que vacía
-  // la tienda en el 98% de sus opciones es peor que no mostrarlo. Se
-  // reactivan cuando el catálogo tenga cobertura real (ver
-  // scripts/audit-catalog.php para medirla).
-  //
-  // El filtro de Color usa pa_color-familia (9 familias: Azul, Rojo...),
-  // no pa_color directo — pa_color tiene ~76 tonos exactos de fabricante
-  // ("Halo Silver - Tanzanite (Gloss)"), correctos para la ficha de
-  // producto pero inservibles como filtro (abruma, la mayoría con 1 solo
-  // producto). Ver scripts/migrate-color-families.php para el mapeo.
-  $taxonomies = [
-    'pa_marca' => __('Marca', 'sage'),
-    'pa_talla' => __('Talla', 'sage'),
-    'pa_color-familia' => __('Color', 'sage'),
-  ];
+  // Lista de taxonomías centralizada en app/catalog-filters.php: la
+  // usan tanto este sidebar como las chips de filtros activos en
+  // archive-product.blade.php.
+  $taxonomies = \App\rb_filter_taxonomies();
 
   // WooCommerce resetea la navegación por capas a la página 1 al cambiar
   // de filtro; nuestras propias URLs no lo hacían porque strtok() solo
@@ -34,7 +15,7 @@
   // resultado: filtrar desde /tienda/page/3/ generaba una URL con filtro
   // que apuntaba a una página 3 que ya no existe con ese resultset.
   $currentUrl = preg_replace('#/page/\d+/?$#', '/', strtok($_SERVER['REQUEST_URI'] ?? '', '?'));
-  $hasFilters = false;
+  $hasFilters = ! empty($_GET['min_price']) || ! empty($_GET['max_price']);
 
   foreach (array_keys($taxonomies) as $tax) {
     if (! empty($_GET['filter_' . str_replace('pa_', '', $tax)])) {
@@ -42,6 +23,10 @@
       break;
     }
   }
+
+  $priceBounds = \App\rb_catalog_price_bounds();
+  $minPrice = isset($_GET['min_price']) ? max(0, (int) $_GET['min_price']) : null;
+  $maxPrice = isset($_GET['max_price']) ? max(0, (int) $_GET['max_price']) : null;
 @endphp
 
 <div class="space-y-8">
@@ -56,6 +41,59 @@
         </a>
       @endif
     </div>
+  @endif
+
+  {{--
+    Filtro de precio: WooCommerce ya sabe leer min_price/max_price en la
+    consulta principal de la tienda (es como funciona su propio widget de
+    precio nativo) — solo faltaba un formulario que los mande. Los demás
+    filtros activos van como campos ocultos para no perderse al enviar
+    este formulario, que solo trae sus propios dos campos en el GET.
+  --}}
+  @if ($priceBounds['max'] > 0)
+    <fieldset class="space-y-3 border-0 p-0 m-0">
+      <legend class="text-xs font-bold uppercase tracking-wider text-ink p-0">{{ __('Precio', 'sage') }}</legend>
+
+      <form method="get" action="{{ $currentUrl }}" class="flex items-center gap-2">
+        @foreach ($_GET as $key => $value)
+          @continue(in_array($key, ['min_price', 'max_price', 'paged'], true) || is_array($value))
+          <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+        @endforeach
+
+        <label class="sr-only" for="rb-min-price">{{ __('Precio mínimo', 'sage') }}</label>
+        <input
+          id="rb-min-price"
+          type="number"
+          name="min_price"
+          min="0"
+          step="1000"
+          inputmode="numeric"
+          placeholder="{{ number_format_i18n((int) $priceBounds['min']) }}"
+          value="{{ $minPrice }}"
+          class="w-full min-w-0 rounded border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink"
+        >
+        <span class="text-ink-subtle text-xs" aria-hidden="true">–</span>
+        <label class="sr-only" for="rb-max-price">{{ __('Precio máximo', 'sage') }}</label>
+        <input
+          id="rb-max-price"
+          type="number"
+          name="max_price"
+          min="0"
+          step="1000"
+          inputmode="numeric"
+          placeholder="{{ number_format_i18n((int) $priceBounds['max']) }}"
+          value="{{ $maxPrice }}"
+          class="w-full min-w-0 rounded border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink"
+        >
+        <button
+          type="submit"
+          class="shrink-0 rounded border border-line-strong px-2.5 py-1.5 text-ink hover:bg-surface-muted transition-colors"
+          aria-label="{{ __('Aplicar filtro de precio', 'sage') }}"
+        >
+          <x-icon name="chevron-right" class="size-3.5" />
+        </button>
+      </form>
+    </fieldset>
   @endif
 
   @foreach ($taxonomies as $taxonomy => $label)
