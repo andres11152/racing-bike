@@ -154,9 +154,9 @@
             </div>
           </a>
 
-          {{-- Tarjeta 3: Bike Builder --}}
+          {{-- Tarjeta 3: Encuentra tu talla --}}
           <a
-            href="{{ $links['builder'] }}"
+            href="{{ $links['sizeGuide'] }}"
             class="group relative flex flex-col justify-between p-6 rounded-2xl border border-line bg-surface-raised/40 hover:bg-surface-raised hover:border-emerald-500/40 transition-all duration-300 shadow-sm hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.15)]"
           >
             <div>
@@ -164,14 +164,14 @@
                 <x-icon name="ruler" class="size-5" />
               </div>
               <h3 class="text-sm font-bold uppercase tracking-wider text-white group-hover:text-emerald-400 transition-colors">
-                {{ __('Configurador 3D', 'sage') }}
+                {{ __('Encuentra tu talla', 'sage') }}
               </h3>
               <p class="mt-1.5 text-xs text-ink-subtle leading-relaxed">
-                {{ __('Arma tu bicicleta personalizada seleccionando marco, grupo y ruedas.', 'sage') }}
+                {{ __('Calcula tu talla ideal según tu estatura en menos de un minuto.', 'sage') }}
               </p>
             </div>
             <div class="mt-5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-emerald-400 group-hover:translate-x-1 transition-transform">
-              <span>{{ __('Armar ahora', 'sage') }}</span>
+              <span>{{ __('Calcular talla', 'sage') }}</span>
               <x-icon name="chevron-right" class="size-3.5" />
             </div>
           </a>

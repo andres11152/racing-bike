@@ -6,7 +6,6 @@
 @source "../**/*.js";
 
 @import "./woocommerce.css";
-@import "./bike-builder.css";
 
 @theme {
   /* ---------------------------------------------------------------------
@@ -321,6 +320,12 @@
     @apply pt-2;
   }
 
+  /* Descripción corta: sólo tiene sentido en la vista lista (hay ancho
+     de sobra) y sólo desde md, igual que el resto de este layout. */
+  .view-mode-list article .rb-card-excerpt {
+    @apply md:block;
+  }
+
   /* -------------------------------------------------------------------------
    | Vista de Cuadrícula Compacta (Alta Densidad)
    * ---------------------------------------------------------------------- */
@@ -393,6 +398,26 @@ header[data-header] {
   box-shadow: 0 8px 30px -6px rgba(16, 185, 129, 0.16), 0 2px 12px -3px rgba(16, 185, 129, 0.08) !important;
   border-bottom-color: rgba(16, 185, 129, 0.2) !important;
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Logo compacto al hacer scroll (data-scrolled la pone initHeaderScroll en app.js) */
+header[data-header][data-scrolled="true"] .rb-logo-wrapper img {
+  height: 2.75rem; /* 44px */
+}
+
+@media (min-width: 768px) {
+  header[data-header][data-scrolled="true"] .rb-logo-wrapper img {
+    height: 3rem; /* 48px */
+  }
+}
+
+header[data-header][data-scrolled="true"] {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 15px rgba(16, 185, 129, 0.08);
+  border-bottom-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+header[data-header][data-scrolled="true"] .rb-container > div {
+  height: 4.75rem !important; /* ~76px */
 }
 
 /* Efecto de brillo metálico y resplandor verde premium para logos */

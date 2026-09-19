@@ -103,7 +103,6 @@ function site_links(): array
         'privacy'   => page_url('politicas').'#privacidad',
         'warranty'  => page_url('politicas').'#garantias',
         'sizeGuide' => page_url('encuentra-tu-talla'),
-        'builder'   => page_url('armar-bicicleta'),
         'road'      => product_cat_url('ruta'),
         'gravel'    => product_cat_url('gravel'),
         'parts'     => product_cat_url('componentes'),

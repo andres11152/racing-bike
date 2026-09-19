@@ -68,7 +68,6 @@ function rb_seo_description(): string
             'template-about.blade.php' => __('La historia de Racing Bike 1998: taller y tienda de bicicletas en Bogotá, armando y ajustando cada bicicleta a mano desde hace más de dos décadas.', 'sage'),
             'template-legal.blade.php' => __('Política de privacidad, términos de servicio y condiciones de garantía de Racing Bike 1998.', 'sage'),
             'template-faqs.blade.php' => __('Respuestas a las preguntas más frecuentes sobre pagos, envíos, garantía y armado de bicicletas en Racing Bike 1998.', 'sage'),
-            'template-bike-builder.blade.php' => __('Arma tu bicicleta a medida: elige marco, componentes y acabados con Racing Bike 1998, taller propio en Bogotá.', 'sage'),
         ];
 
         $template = get_page_template_slug();

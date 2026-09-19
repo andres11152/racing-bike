@@ -26,7 +26,6 @@ function rb_seo_ensure_focus_keywords() {
         'sobre-nosotros'       => 'Racing Bike 1998',
         'contacto'             => 'Taller de bicicletas Bogotá',
         'encuentra-tu-talla'   => 'Talla de bicicleta',
-        'armar-bicicleta'      => 'Armar bicicleta',
         'preguntas-frecuentes' => 'Preguntas frecuentes bicicletas',
         'politicas'            => 'Garantía bicicletas Racing Bike',
     ];
