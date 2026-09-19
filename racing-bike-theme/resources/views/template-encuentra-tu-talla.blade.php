@@ -23,12 +23,17 @@
     ],
   ];
 
-  $sizeTable = [
-    ['size' => 'XS', 'height' => __('160 – 168 cm', 'sage'), 'inseam' => __('Entrepierna ~72-76 cm', 'sage')],
-    ['size' => 'S', 'height' => __('168 – 175 cm', 'sage'), 'inseam' => __('Entrepierna ~76-80 cm', 'sage')],
-    ['size' => 'M', 'height' => __('175 – 183 cm', 'sage'), 'inseam' => __('Entrepierna ~80-85 cm', 'sage')],
-    ['size' => 'L', 'height' => __('183 – 192 cm', 'sage'), 'inseam' => __('Entrepierna ~85-90 cm', 'sage')],
-  ];
+  // La tabla de esta sección ya NO se escribe a mano aquí: hasta ahora
+  // tenía sus propios rangos de estatura (XS 160-168cm, S 168-175cm...)
+  // que nunca se actualizaron cuando el cálculo real del modal
+  // (racing-bike-size-calculator/assets/js/calculator.js) pasó a basarse
+  // en entrepierna estimada, no en la estatura directa — el visitante
+  // veía una talla en esta tabla y otra distinta al usar "Calcular mi
+  // talla" para la misma estatura. La tabla ahora la genera
+  // calculator.js en tiempo real llamando a la MISMA función
+  // (window.RBSizeCalculator.calculateDisciplineSize) que usa el modal,
+  // así que estructuralmente no puede desalinearse: ver
+  // initRbSizeReferenceTable() en ese archivo.
 @endphp
 
 @section('content')
@@ -111,14 +116,17 @@
                   <th class="border-b border-line px-4 py-3">{{ __('Referencia', 'sage') }}</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-line text-ink-muted">
-                @foreach ($sizeTable as $row)
-                  <tr class="transition-colors hover:bg-surface-raised">
-                    <td class="px-4 py-3 font-bold text-ink">{{ $row['size'] }}</td>
-                    <td class="px-4 py-3 font-medium text-ink">{{ $row['height'] }}</td>
-                    <td class="px-4 py-3 text-xs">{{ $row['inseam'] }}</td>
-                  </tr>
-                @endforeach
+              {{--
+                Filas generadas por initRbSizeReferenceTable() en
+                calculator.js, llamando a la misma
+                window.RBSizeCalculator.calculateDisciplineSize() que usa
+                el modal — ver el comentario en el @php de arriba. La fila
+                de "Cargando…" es lo único que se ve si JS no corre.
+              --}}
+              <tbody class="divide-y divide-line text-ink-muted" data-rb-size-reference-table data-discipline="road">
+                <tr>
+                  <td class="px-4 py-3 text-xs text-ink-subtle" colspan="3">{{ __('Cargando tabla de referencia…', 'sage') }}</td>
+                </tr>
               </tbody>
             </table>
           </div>

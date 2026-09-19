@@ -1,3 +1,113 @@
+// Estima la entrepierna a partir de la estatura (aprox. 45.7% de la
+// estatura) cuando el usuario no midió la suya con el ajuste biomecánico
+// avanzado. Vive en el ámbito del módulo (no dentro de initRbSizeCalculator)
+// para que cualquier otra página del sitio que necesite mostrar una talla
+// de referencia use exactamente esta misma cuenta, no una copia a mano.
+function rbEstimateInseamFromHeight(height) {
+    return Math.round(height * 0.457);
+}
+
+// Calcula talla biomecánica para una disciplina específica. Única fuente de
+// verdad de la relación estatura/entrepierna -> talla de marco: antes de
+// esto, la página /encuentra-tu-talla/ tenía su propia tabla de estatura
+// escrita a mano (XS 160-168cm, S 168-175cm...) que nunca se actualizó
+// cuando este cálculo cambió a basarse en entrepierna — dos lugares
+// calculando lo mismo con números distintos. Ahora vive en el ámbito del
+// módulo y se expone en window.RBSizeCalculator para que esa página (o
+// cualquier otra) construya su tabla de referencia llamando a esta misma
+// función, nunca duplicándola.
+function rbCalculateDisciplineSize(discipline, inseam) {
+    let letter = 'M';
+    let frameSizeDesc = '';
+    let longDesc = '';
+    let numericSize = null;
+
+    if (discipline === 'road') {
+        const cm = Math.round(inseam * 0.67);
+        frameSizeDesc = `${cm} cm`;
+        numericSize = cm;
+
+        if (cm < 50) {
+            letter = 'XXS';
+            longDesc = 'Talla XXS (44-49 cm). La más compacta del catálogo, para ciclistas de baja estatura en ruta.';
+        } else if (cm < 52) {
+            letter = 'XS';
+            longDesc = 'Talla XS (50-51 cm). Diseñada para máxima agilidad y reactividad en carretera.';
+        } else if (cm < 54) {
+            letter = 'S';
+            longDesc = 'Talla S (52-53 cm). Equilibrio perfecto entre aerodinámica y reactividad en carretera.';
+        } else if (cm < 56) {
+            letter = 'M';
+            longDesc = 'Talla M (54-55 cm). El estándar de oro: balance óptimo de rigidez, confort y velocidad.';
+        } else if (cm < 58) {
+            letter = 'L';
+            longDesc = 'Talla L (56-57 cm). Máxima estabilidad y potencia de palanca en planos y descensos rápidos.';
+        } else {
+            letter = 'XL';
+            longDesc = 'Talla XL (58 cm en adelante). Mayor alcance y estabilidad para ciclistas de estatura alta.';
+        }
+    } else if (discipline === 'mtb') {
+        const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
+        frameSizeDesc = `${inches}"`;
+        numericSize = inches;
+
+        if (inches < 13) {
+            letter = 'XXS';
+            longDesc = 'Talla XXS (menos de 13"). Máxima altura libre y control para senderos técnicos.';
+        } else if (inches < 15) {
+            letter = 'XS';
+            longDesc = 'Talla XS (13-14"). Excelente maniobrabilidad en descensos y senderos estrechos.';
+        } else if (inches < 17) {
+            letter = 'S';
+            longDesc = 'Talla S (15-16"). Geometría juguetona y reactiva en terrenos de montaña.';
+        } else if (inches < 19) {
+            letter = 'M';
+            longDesc = 'Talla M (17-18"). Control preciso y estabilidad óptima en ascensos y descensos.';
+        } else if (inches < 21) {
+            letter = 'L';
+            longDesc = 'Talla L (19-20"). Mayor tracción y estabilidad en altas velocidades campo traviesa.';
+        } else {
+            letter = 'XL';
+            longDesc = 'Talla XL (21" en adelante). Máximo alcance para ciclistas de estatura alta en montaña.';
+        }
+    } else { // Gravel
+        const cm = Math.round(inseam * 0.63);
+        frameSizeDesc = `${cm} cm`;
+        numericSize = cm;
+
+        if (cm < 47) {
+            letter = 'XXS';
+            longDesc = 'Talla XXS (menos de 47 cm). Gran maniobrabilidad en terrenos mixtos.';
+        } else if (cm < 50) {
+            letter = 'XS';
+            longDesc = 'Talla XS (47-49 cm). Diseñada para comodidad y respuesta en caminos destapados.';
+        } else if (cm < 53) {
+            letter = 'S';
+            longDesc = 'Talla S (50-52 cm). Óptimo confort en aventuras de gravel y asfalto rugoso.';
+        } else if (cm < 56) {
+            letter = 'M';
+            longDesc = 'Talla M (53-55 cm). Balance ideal entre postura erguida de fondo y velocidad.';
+        } else if (cm < 59) {
+            letter = 'L';
+            longDesc = 'Talla L (56-58 cm). Gran estabilidad de rodadura para largas travesías.';
+        } else {
+            letter = 'XL';
+            longDesc = 'Talla XL (59 cm en adelante). Mayor alcance para ciclistas de estatura alta en gravel.';
+        }
+    }
+
+    return { letter, frameSizeDesc, longDesc, numericSize };
+}
+
+// API pública del plugin: cualquier vista del theme que necesite mostrar
+// una talla o una tabla de referencia debe llamar a esto, nunca reescribir
+// el cálculo. Se expone ANTES de initRbSizeCalculator (que corre en
+// DOMContentLoaded) para que esté disponible tan pronto el script carga.
+window.RBSizeCalculator = {
+    calculateDisciplineSize: rbCalculateDisciplineSize,
+    estimateInseamFromHeight: rbEstimateInseamFromHeight,
+};
+
 function initRbSizeCalculator() {
     const modal = document.getElementById('rb-size-finder-modal');
     if (!modal) return;
@@ -231,89 +341,11 @@ function initRbSizeCalculator() {
         });
     });
 
-    // Calcula talla biomecánica para una disciplina específica
-    function calculateDisciplineSize(discipline, inseam) {
-        let letter = 'M';
-        let frameSizeDesc = '';
-        let longDesc = '';
-        let numericSize = null;
-
-        if (discipline === 'road') {
-            const cm = Math.round(inseam * 0.67);
-            frameSizeDesc = `${cm} cm`;
-            numericSize = cm;
-
-            if (cm < 50) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (44-49 cm). La más compacta del catálogo, para ciclistas de baja estatura en ruta.';
-            } else if (cm < 52) {
-                letter = 'XS';
-                longDesc = 'Talla XS (50-51 cm). Diseñada para máxima agilidad y reactividad en carretera.';
-            } else if (cm < 54) {
-                letter = 'S';
-                longDesc = 'Talla S (52-53 cm). Equilibrio perfecto entre aerodinámica y reactividad en carretera.';
-            } else if (cm < 56) {
-                letter = 'M';
-                longDesc = 'Talla M (54-55 cm). El estándar de oro: balance óptimo de rigidez, confort y velocidad.';
-            } else if (cm < 58) {
-                letter = 'L';
-                longDesc = 'Talla L (56-57 cm). Máxima estabilidad y potencia de palanca en planos y descensos rápidos.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (58 cm en adelante). Mayor alcance y estabilidad para ciclistas de estatura alta.';
-            }
-        } else if (discipline === 'mtb') {
-            const inches = Math.round(((inseam * 0.67 * 0.3937) - 4) * 2) / 2;
-            frameSizeDesc = `${inches}"`;
-            numericSize = inches;
-
-            if (inches < 13) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (menos de 13"). Máxima altura libre y control para senderos técnicos.';
-            } else if (inches < 15) {
-                letter = 'XS';
-                longDesc = 'Talla XS (13-14"). Excelente maniobrabilidad en descensos y senderos estrechos.';
-            } else if (inches < 17) {
-                letter = 'S';
-                longDesc = 'Talla S (15-16"). Geometría juguetona y reactiva en terrenos de montaña.';
-            } else if (inches < 19) {
-                letter = 'M';
-                longDesc = 'Talla M (17-18"). Control preciso y estabilidad óptima en ascensos y descensos.';
-            } else if (inches < 21) {
-                letter = 'L';
-                longDesc = 'Talla L (19-20"). Mayor tracción y estabilidad en altas velocidades campo traviesa.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (21" en adelante). Máximo alcance para ciclistas de estatura alta en montaña.';
-            }
-        } else { // Gravel
-            const cm = Math.round(inseam * 0.63);
-            frameSizeDesc = `${cm} cm`;
-            numericSize = cm;
-
-            if (cm < 47) {
-                letter = 'XXS';
-                longDesc = 'Talla XXS (menos de 47 cm). Gran maniobrabilidad en terrenos mixtos.';
-            } else if (cm < 50) {
-                letter = 'XS';
-                longDesc = 'Talla XS (47-49 cm). Diseñada para comodidad y respuesta en caminos destapados.';
-            } else if (cm < 53) {
-                letter = 'S';
-                longDesc = 'Talla S (50-52 cm). Óptimo confort en aventuras de gravel y asfalto rugoso.';
-            } else if (cm < 56) {
-                letter = 'M';
-                longDesc = 'Talla M (53-55 cm). Balance ideal entre postura erguida de fondo y velocidad.';
-            } else if (cm < 59) {
-                letter = 'L';
-                longDesc = 'Talla L (56-58 cm). Gran estabilidad de rodadura para largas travesías.';
-            } else {
-                letter = 'XL';
-                longDesc = 'Talla XL (59 cm en adelante). Mayor alcance para ciclistas de estatura alta en gravel.';
-            }
-        }
-
-        return { letter, frameSizeDesc, longDesc, numericSize };
-    }
+    // El cálculo real (estatura/entrepierna -> talla) vive en
+    // rbCalculateDisciplineSize, en el ámbito del módulo — ver el
+    // comentario junto a su definición al inicio del archivo. Alias local
+    // para no tener que cambiar cada llamada de abajo.
+    const calculateDisciplineSize = rbCalculateDisciplineSize;
 
     // Main calculation logic
     function calculateSize() {
@@ -324,7 +356,7 @@ function initRbSizeCalculator() {
 
         // If advanced biomechanics is off, estimate inseam (approx 45.7% of height)
         if (advancedToggle && !advancedToggle.checked) {
-            inseam = Math.round(height * 0.457);
+            inseam = rbEstimateInseamFromHeight(height);
             if (inseamInput) {
                 inseamInput.value = inseam;
                 if (inseamDisplay) inseamDisplay.textContent = inseam;
@@ -446,9 +478,59 @@ function initRbSizeCalculator() {
     }
 }
 
+// Tabla de referencia por estatura de /encuentra-tu-talla/ (y de
+// cualquier otra página que traiga el mismo contenedor). Construida
+// recorriendo estaturas cm a cm y llamando a rbCalculateDisciplineSize —
+// la MISMA función que usa el modal — en vez de mantener una tabla
+// aparte escrita a mano que inevitablemente se desalinea cuando cambia
+// el cálculo real (ver el comentario en el @php del template).
+function initRbSizeReferenceTable() {
+    const tbody = document.querySelector('[data-rb-size-reference-table]');
+    if (!tbody) return;
+
+    const discipline = tbody.dataset.discipline || 'road';
+    const MIN_HEIGHT = 150;
+    const MAX_HEIGHT = 205;
+
+    const buckets = [];
+    for (let height = MIN_HEIGHT; height <= MAX_HEIGHT; height++) {
+        const inseam = rbEstimateInseamFromHeight(height);
+        const { letter, frameSizeDesc } = rbCalculateDisciplineSize(discipline, inseam);
+        const current = buckets[buckets.length - 1];
+
+        if (current && current.letter === letter) {
+            current.maxHeight = height;
+            current.maxFrame = frameSizeDesc;
+        } else {
+            buckets.push({ letter, minHeight: height, maxHeight: height, minFrame: frameSizeDesc, maxFrame: frameSizeDesc });
+        }
+    }
+
+    tbody.innerHTML = buckets.map((bucket) => {
+        const heightRange = bucket.minHeight === bucket.maxHeight
+            ? `${bucket.minHeight} cm`
+            : `${bucket.minHeight} – ${bucket.maxHeight} cm`;
+        const frameRange = bucket.minFrame === bucket.maxFrame
+            ? `Marco ${bucket.minFrame}`
+            : `Marco ${bucket.minFrame} – ${bucket.maxFrame}`;
+
+        return `
+          <tr class="transition-colors hover:bg-surface-raised">
+            <td class="px-4 py-3 font-bold text-ink">${bucket.letter}</td>
+            <td class="px-4 py-3 font-medium text-ink">${heightRange}</td>
+            <td class="px-4 py-3 text-xs">${frameRange}</td>
+          </tr>
+        `;
+    }).join('');
+}
+
 // Execute setup
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRbSizeCalculator);
+    document.addEventListener('DOMContentLoaded', () => {
+        initRbSizeCalculator();
+        initRbSizeReferenceTable();
+    });
 } else {
     initRbSizeCalculator();
+    initRbSizeReferenceTable();
 }
