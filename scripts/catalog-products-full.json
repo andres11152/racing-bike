@@ -1,0 +1,663 @@
+[
+    {
+        "id": 2056,
+        "name": "Casco de Ciclismo GW RC",
+        "sku": "GW-CAS-RC",
+        "categories": [
+            "cascos",
+            "Para la Ruta",
+            "Para Ti"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Gris, Negro, Verde"
+        },
+        "desc_length": 917
+    },
+    {
+        "id": 2008,
+        "name": "Grupo MTB Shimano Deore M6100 1x12V (32T 10-51T)",
+        "sku": "SHI-GRP-DEO-M6100-12V",
+        "categories": [
+            "Grupos de MTB",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 3651
+    },
+    {
+        "id": 1993,
+        "name": "Grupo Gravel Shimano GRX RX610 Disco 2x12V (46-30T 11-36T)",
+        "sku": "SHI-GRP-GRX-RX610-12V",
+        "categories": [
+            "Grupos de MTB",
+            "Grupos de Ruta",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 2143
+    },
+    {
+        "id": 1977,
+        "name": "Grupo MTB Shimano CUES U4000 Monoplato 9V (32T 11-46T)",
+        "sku": "SHI-GRP-CUES-U4000-9V",
+        "categories": [
+            "Grupos de MTB",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 2644
+    },
+    {
+        "id": 1950,
+        "name": "Grupo MTB Shimano Deore M5100 1x11V (32T 11-51T)",
+        "sku": "SHI-GRP-DEO-M5100-11V",
+        "categories": [
+            "Grupos de MTB",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 5530
+    },
+    {
+        "id": 1934,
+        "name": "Grupo de Ruta Shimano CUES U6030 2x10V (46-32T 11-39T)",
+        "sku": "SHI-GRP-CUES-U6030-10V",
+        "categories": [
+            "Grupos de MTB",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 4423
+    },
+    {
+        "id": 1923,
+        "name": "Grupo MTB Shimano NS 1x12V (32T 10-51T)",
+        "sku": "SHI-GRP-NS-12V",
+        "categories": [
+            "Grupos de MTB",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 2845
+    },
+    {
+        "id": 1867,
+        "name": "Simulador Inteligente Magene T600 Eco",
+        "sku": "MAG-SIM-T600-ECO",
+        "categories": [
+            "Simuladores \/ Rodillos",
+            "Transmisión"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 5271
+    },
+    {
+        "id": 1862,
+        "name": "Simulador Inteligente Magene T200",
+        "sku": "MAG-SIM-T200",
+        "categories": [
+            "Simuladores \/ Rodillos",
+            "Transmisión"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 3829
+    },
+    {
+        "id": 1845,
+        "name": "Pedales con Potenciómetro Magene P715 S (Single)",
+        "sku": "MAG-POT-P715S",
+        "categories": [
+            "Para tu bici",
+            "Pedales"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 3082
+    },
+    {
+        "id": 1843,
+        "name": "Pedales con Potenciómetro Magene P715 K (Dual)",
+        "sku": "MAG-POT-P715K",
+        "categories": [
+            "Para tu bici",
+            "Pedales"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 3066
+    },
+    {
+        "id": 1824,
+        "name": "Soporte para Ciclocomputador Magene Básico",
+        "sku": "MAG-ACC-SUP-BAS",
+        "categories": [
+            "Para tu bici",
+            "Ciclocomputadores"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 2113
+    },
+    {
+        "id": 1819,
+        "name": "Soporte de Manubrio Magene Integrado de Aluminio",
+        "sku": "MAG-ACC-SUP-INT",
+        "categories": [
+            "Para tu bici",
+            "Ciclocomputadores"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 2443
+    },
+    {
+        "id": 1808,
+        "name": "Grupo de Ruta Shimano Tiagra R4000 Disco 2x11V (52-36T 11-36T)",
+        "sku": "SHI-GRP-TIAG-R4000-11V",
+        "categories": [
+            "Grupos de Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 2600
+    },
+    {
+        "id": 1799,
+        "name": "Grupo de Ruta Shimano Dura-Ace Di2 R9270 Disco 12V (52-36T 11-30T)",
+        "sku": "SHI-GRP-DURA-R9270-12V",
+        "categories": [
+            "Grupos de Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 2353
+    },
+    {
+        "id": 1784,
+        "name": "Grupo de Ruta Shimano Ultegra Di2 R8170 Disco 12V",
+        "sku": "SHI-GRP-ULTE-R8170-12V",
+        "categories": [
+            "Grupos de Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 4523
+    },
+    {
+        "id": 1775,
+        "name": "Grupo de Ruta Shimano 105 Di2 R7170 Disco 12V (52-36T 11-34T)",
+        "sku": "SHI-GRP-105-R7170-12V",
+        "categories": [
+            "Grupos de Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 3604
+    },
+    {
+        "id": 1760,
+        "name": "Grupo de Ruta Shimano 105 R7000 Disco 11V",
+        "sku": "SHI-GRP-105-R7000-11V",
+        "categories": [
+            "Grupos de Ruta",
+            "Transmisión"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Shimano"
+        },
+        "desc_length": 3220
+    },
+    {
+        "id": 1736,
+        "name": "Bicicleta de Ruta Trek Domane AL 4 Gen 4 2026",
+        "sku": "TRK-ROA-DOM-AL4-26",
+        "categories": [
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Trek",
+            "pa_color": "Era White, Hex Blue to Marianas Blue Fade",
+            "pa_talla": "44, 49, 52, 54, 56, 58, 61",
+            "pa_color-familia": "Azul, Blanco"
+        },
+        "desc_length": 4244
+    },
+    {
+        "id": 1713,
+        "name": "Bicicleta de Ruta Trek Émonda ALR 5 2026",
+        "sku": "TRK-ROA-EMON-ALR5-26",
+        "categories": [
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Trek",
+            "pa_color-familia": "Negro, Rojo"
+        },
+        "desc_length": 3162
+    },
+    {
+        "id": 1692,
+        "name": "Bicicleta de Ruta Trek Domane AL 2 2026",
+        "sku": "TRK-ROA-DOM-AL2-26",
+        "categories": [
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Trek",
+            "pa_color-familia": "Gris, Rojo"
+        },
+        "desc_length": 5725
+    },
+    {
+        "id": 1645,
+        "name": "Bicicleta MTB GW Zebra 29",
+        "sku": "GW-MTB-ZEBRA-29",
+        "categories": [
+            "Bicicletas",
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Negro"
+        },
+        "desc_length": 2522
+    },
+    {
+        "id": 1128,
+        "name": "Bicicleta MTB Orbea Alma H20 2026",
+        "sku": "ORB-MTB-ALMA-H20-26",
+        "categories": [
+            "Bicicletas",
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Multicolor"
+        },
+        "desc_length": 722
+    },
+    {
+        "id": 1117,
+        "name": "Bicicleta MTB Poseidon Keto 10V LTWOO Rin 29",
+        "sku": "POS-MTB-KETO-29-10V",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Poseidon"
+        },
+        "desc_length": 1686
+    },
+    {
+        "id": 882,
+        "name": "Bicicleta MTB Orbea Alma H30 2026",
+        "sku": "ORB-MTB-ALMA-H30-26",
+        "categories": [
+            "Bicicletas",
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Multicolor"
+        },
+        "desc_length": 748
+    },
+    {
+        "id": 861,
+        "name": "Bicicleta MTB Orbea Alma H20 2025",
+        "sku": "ORB-MTB-ALMA-H20-25",
+        "categories": [
+            "Bicicletas",
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_talla": "XL, L, M, S",
+            "pa_color": "Espace Green (Matt) - Ivory White (Gloss), Halo Silver - Tanzanite (Gloss)",
+            "pa_color-familia": "Multicolor"
+        },
+        "desc_length": 148
+    },
+    {
+        "id": 852,
+        "name": "Bicicleta MTB Orbea Alma H30 2025",
+        "sku": "ORB-MTB-ALMA-H30-25",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Multicolor"
+        },
+        "desc_length": 730
+    },
+    {
+        "id": 841,
+        "name": "Bicicleta MTB GW Alligator 29 1x11V",
+        "sku": "GW-MTB-ALLIG-29-11V",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Negro, Rojo, Verde"
+        },
+        "desc_length": 1402
+    },
+    {
+        "id": 832,
+        "name": "Bicicleta MTB GW Hawk 1x12V Rin 29",
+        "sku": "GW-MTB-HAWK-29-12V",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Multicolor, Negro"
+        },
+        "desc_length": 1508
+    },
+    {
+        "id": 834,
+        "name": "Bicicleta MTB GW Lynx Rin 29",
+        "sku": "GW-MTB-LYNX-29-7V",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Negro, Rojo, Verde"
+        },
+        "desc_length": 1704
+    },
+    {
+        "id": 835,
+        "name": "Bicicleta MTB GW Monkey 3x7V Rin 29",
+        "sku": "GW-MTB-MONK-29-7V",
+        "categories": [
+            "Mtb"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Gris, Morado \/ Rosado, Multicolor, Negro, Rojo, Verde"
+        },
+        "desc_length": 1272
+    },
+    {
+        "id": 818,
+        "name": "Luz Trasera Inteligente Magene L308 Expression",
+        "sku": "MAG-ELE-L308",
+        "categories": [
+            "Luces",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "Método de instalación": "Tija de sillín, Sillín",
+            "pa_marca": "Magene"
+        },
+        "desc_length": 1592
+    },
+    {
+        "id": 821,
+        "name": "Luz Trasera con Radar Magene L508 Radar",
+        "sku": "MAG-ELE-L508",
+        "categories": [
+            "Luces",
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 1652
+    },
+    {
+        "id": 741,
+        "name": "Bicicleta de Ruta Orbea Avant H50 2026",
+        "sku": "ORB-ROA-AVANT-H50-26",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Azul, Dorado \/ Bronce, Multicolor"
+        },
+        "desc_length": 1370
+    },
+    {
+        "id": 676,
+        "name": "Bicicleta de Ruta Orbea Orca M30 2025",
+        "sku": "ORB-ROA-ORCA-M30-25",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Azul, Gris, Multicolor"
+        },
+        "desc_length": 849
+    },
+    {
+        "id": 677,
+        "name": "Bicicleta de Ruta Orbea Orca M30i 2025 OMR",
+        "sku": "ORB-ROA-ORCA-M30I-25",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Orbea",
+            "pa_color-familia": "Azul, Gris, Multicolor"
+        },
+        "desc_length": 907
+    },
+    {
+        "id": 518,
+        "name": "Bicicleta de Ruta GW Zoncolan 700C 105 2x12V",
+        "sku": "GW-ROA-ZONC-105-12V",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Gris, Negro, Rojo"
+        },
+        "desc_length": 1101
+    },
+    {
+        "id": 515,
+        "name": "Bicicleta de Ruta GW Sprinter",
+        "sku": "GW-ROA-SPRNT-RUTA",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Gris, Negro, Rojo, Verde"
+        },
+        "desc_length": 1101
+    },
+    {
+        "id": 509,
+        "name": "Bicicleta de Ruta GW Flamma Disco Tiagra 10V",
+        "sku": "GW-ROA-FLAM-DISC-10V",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "Tipo de freno": "Disco"
+        },
+        "desc_length": 1076
+    },
+    {
+        "id": 512,
+        "name": "Bicicleta de Ruta GW Letras+D",
+        "sku": "GW-ROA-LETR-D-RUTA",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Blanco, Gris, Rojo, Verde"
+        },
+        "desc_length": 1067
+    },
+    {
+        "id": 506,
+        "name": "Bicicleta de Ruta GW Flamma 700C Claris 2x8V",
+        "sku": "GW-ROA-FLAM-CLAR-8V",
+        "categories": [
+            "Ruta",
+            "Bicicletas",
+            "Ruta"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "GW",
+            "pa_color-familia": "Azul, Gris, Negro"
+        },
+        "desc_length": 1057
+    },
+    {
+        "id": 395,
+        "name": "Ciclocomputador GPS Magene C606 V2 Smart",
+        "sku": "MAG-ELE-C606-V2",
+        "categories": [
+            "Para tu bici",
+            "Ciclocomputadores"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 1196
+    },
+    {
+        "id": 396,
+        "name": "Ciclocomputador GPS Magene C606 Pro Smart",
+        "sku": "MAG-ELE-C606-PRO",
+        "categories": [
+            "Para tu bici",
+            "Ciclocomputadores"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 1189
+    },
+    {
+        "id": 397,
+        "name": "Ciclocomputador GPS Magene C706 Smart",
+        "sku": "MAG-ELE-C706",
+        "categories": [
+            "Para tu bici",
+            "Ciclocomputadores"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Magene"
+        },
+        "desc_length": 1382
+    },
+    {
+        "id": 359,
+        "name": "Bicicleta Eléctrica GW Bogotá 350W",
+        "sku": "GW-EBK-BOG-350W",
+        "categories": [
+            "Bicicletas",
+            "E-bike"
+        ],
+        "current_visible_attributes": {
+            "pa_disciplina": "e-bike",
+            "pa_marca": "GW",
+            "pa_material": "Aluminio"
+        },
+        "desc_length": 2039
+    },
+    {
+        "id": 46,
+        "name": "Caramañola de Ciclismo Racing Bike RB 750ml",
+        "sku": "RB-ACC-750ML",
+        "categories": [
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Racing Bike"
+        },
+        "desc_length": 595
+    },
+    {
+        "id": 40,
+        "name": "Ruedas de Carbono Racing Bike RB Carbon 50",
+        "sku": "RB-ACC-CARB-50",
+        "categories": [
+            "Frames"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Racing Bike"
+        },
+        "desc_length": 595
+    },
+    {
+        "id": 42,
+        "name": "Sillín de Ciclismo Racing Bike RB Race",
+        "sku": "RB-ACC-RACE",
+        "categories": [
+            "Frames"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Racing Bike"
+        },
+        "desc_length": 535
+    },
+    {
+        "id": 44,
+        "name": "Guantes de Ciclismo Racing Bike RB Pro",
+        "sku": "RB-ACC-PRO",
+        "categories": [
+            "Para tu bici"
+        ],
+        "current_visible_attributes": {
+            "pa_marca": "Racing Bike"
+        },
+        "desc_length": 541
+    }
+]
