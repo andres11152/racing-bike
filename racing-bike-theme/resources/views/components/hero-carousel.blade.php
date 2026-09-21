@@ -77,12 +77,34 @@
                 ></video>
               @endif
             @elseif (!empty($slide['image_desktop']) || !empty($slide['image_mobile']))
+              @php
+                // srcset real cuando hay id de adjunto: sin esto el hero —la
+                // imagen con más probabilidad de ser el LCP del sitio— pedía
+                // siempre el tamaño "full" del featured image (hasta 2-3 MB)
+                // hasta en un móvil de 380px de ancho. El <source> ocupa
+                // 100vw en desktop (16:7 a ancho completo); el <img> igual
+                // en el rango mobile (4:5 a ancho completo).
+                $desktopSrcset = !empty($slide['image_desktop_id']) ? wp_get_attachment_image_srcset($slide['image_desktop_id'], 'full') : false;
+                $mobileSrcset = !empty($slide['image_mobile_id']) ? wp_get_attachment_image_srcset($slide['image_mobile_id'], 'full') : false;
+              @endphp
               <picture class="size-full">
                 @if (!empty($slide['image_desktop']))
-                  <source media="(min-width: 768px)" srcset="{{ $slide['image_desktop'] }}">
+                  <source
+                    media="(min-width: 768px)"
+                    srcset="{{ $desktopSrcset ?: $slide['image_desktop'] }}"
+                    @if ($desktopSrcset)
+                      sizes="100vw"
+                    @endif
+                  >
                 @endif
                 <img
                   src="{{ $slide['image_mobile'] ?: $slide['image_desktop'] }}"
+                  @if ($mobileSrcset)
+                    srcset="{{ $mobileSrcset }}"
+                    sizes="100vw"
+                  @endif
+                  width="800"
+                  height="1000"
                   alt="{{ !empty($slide['alt']) ? $slide['alt'] : ($slide['title'] ?? 'Racing Bike 1998') }}"
                   class="size-full object-cover ken-burns"
                   @if ($index === 0)

@@ -79,19 +79,28 @@ class Home extends Composer
             ]);
 
             return collect($query->posts)
-                ->map(fn (WP_Post $slide) => [
-                    'id' => $slide->ID,
-                    'title' => get_the_title($slide),
-                    'eyebrow' => $slide->post_excerpt,
-                    'url' => get_post_meta($slide->ID, '_rb_slide_url', true),
-                    'cta' => get_post_meta($slide->ID, '_rb_slide_cta', true),
-                    'image' => get_the_post_thumbnail_url($slide, 'full') ?: null,
-                    'image_desktop' => get_the_post_thumbnail_url($slide, 'full') ?: null,
-                    'image_mobile' => get_post_meta($slide->ID, '_rb_slide_image_mobile', true) ?: get_the_post_thumbnail_url($slide, 'full') ?: null,
-                    'video_desktop' => get_post_meta($slide->ID, '_rb_slide_video_desktop', true) ?: null,
-                    'video_mobile' => get_post_meta($slide->ID, '_rb_slide_video_mobile', true) ?: null,
-                    'alt' => get_post_meta(get_post_thumbnail_id($slide), '_wp_attachment_image_alt', true) ?: '',
-                ])
+                ->map(function (WP_Post $slide) {
+                    $thumbnailId = get_post_thumbnail_id($slide);
+                    $customMobileImage = get_post_meta($slide->ID, '_rb_slide_image_mobile', true);
+                    $customMobileId = $customMobileImage ? attachment_url_to_postid($customMobileImage) : null;
+                    $mobileAttachmentId = $customMobileId ?: ($thumbnailId ?: null);
+
+                    return [
+                        'id' => $slide->ID,
+                        'title' => get_the_title($slide),
+                        'eyebrow' => $slide->post_excerpt,
+                        'url' => get_post_meta($slide->ID, '_rb_slide_url', true),
+                        'cta' => get_post_meta($slide->ID, '_rb_slide_cta', true),
+                        'image' => get_the_post_thumbnail_url($slide, 'full') ?: null,
+                        'image_desktop' => get_the_post_thumbnail_url($slide, 'full') ?: null,
+                        'image_desktop_id' => $thumbnailId ?: null,
+                        'image_mobile' => $mobileAttachmentId ? (wp_get_attachment_image_url($mobileAttachmentId, 'medium_large') ?: wp_get_attachment_image_url($mobileAttachmentId, 'large') ?: ($customMobileImage ?: get_the_post_thumbnail_url($slide, 'full'))) : ($customMobileImage ?: (get_the_post_thumbnail_url($slide, 'full') ?: null)),
+                        'image_mobile_id' => $mobileAttachmentId,
+                        'video_desktop' => get_post_meta($slide->ID, '_rb_slide_video_desktop', true) ?: null,
+                        'video_mobile' => get_post_meta($slide->ID, '_rb_slide_video_mobile', true) ?: null,
+                        'alt' => get_post_meta($thumbnailId, '_wp_attachment_image_alt', true) ?: '',
+                    ];
+                })
                 ->all();
         });
     }
@@ -99,7 +108,7 @@ class Home extends Composer
     /**
      * Top-level product categories, shown as the navigation strip.
      *
-     * @return array<int, array{name: string, url: string, count: int, image: ?string}>
+     * @return array<int, array{name: string, url: string, count: int, image: ?string, srcset?: string}>
      */
     protected function categories(): array
     {
@@ -123,12 +132,15 @@ class Home extends Composer
                 ->map(function ($term) {
                     $thumbnailId = get_term_meta($term->term_id, 'thumbnail_id', true);
                     $link = get_term_link($term);
+                    $imgUrl = $thumbnailId ? (wp_get_attachment_image_url((int) $thumbnailId, 'woocommerce_thumbnail') ?: wp_get_attachment_image_url((int) $thumbnailId, 'medium') ?: wp_get_attachment_image_url((int) $thumbnailId, 'large')) : null;
+                    $srcset = $thumbnailId ? wp_get_attachment_image_srcset((int) $thumbnailId, 'medium') : '';
 
                     return [
                         'name' => $term->name,
                         'url' => is_wp_error($link) ? '' : $link,
                         'count' => (int) $term->count,
-                        'image' => $thumbnailId ? wp_get_attachment_image_url((int) $thumbnailId, 'large') : null,
+                        'image' => $imgUrl,
+                        'srcset' => $srcset ?: '',
                     ];
                 })
                 ->all();

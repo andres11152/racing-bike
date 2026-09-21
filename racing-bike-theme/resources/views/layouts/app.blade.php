@@ -3,6 +3,25 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- ── Preconnects de rendimiento ──────────────────────────────────────
+         fonts.googleapis / gstatic acortan el chain crítico de fuentes.
+         s3.amazonaws.com y cdn.addi.com solo se precargan si Addi está activo.
+    ── --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    @if (is_product() || is_cart() || is_checkout())
+      <link rel="preconnect" href="https://s3.amazonaws.com" crossorigin>
+      <link rel="preconnect" href="https://cdn.addi.com" crossorigin>
+    @endif
+
+    {{-- Google Fonts asíncronas para eliminar render-blocking --}}
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syncopate:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syncopate:wght@400;700&display=swap" media="print" onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syncopate:wght@400;700&display=swap">
+    </noscript>
+
     @php(do_action('get_header'))
     @php(wp_head())
 
