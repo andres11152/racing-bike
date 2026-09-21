@@ -23,7 +23,13 @@
                 @if ($category['image'])
                   <img
                     src="{{ $category['image'] }}"
+                    @if (!empty($category['srcset']))
+                      srcset="{{ $category['srcset'] }}"
+                      sizes="(min-width: 1024px) 240px, (min-width: 640px) 260px, 200px"
+                    @endif
                     alt="{{ $category['name'] }}"
+                    width="300"
+                    height="375"
                     loading="lazy"
                     decoding="async"
                     class="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
@@ -69,19 +75,55 @@
           </h2>
         </div>
 
-        <div class="flex items-center gap-4">
-          <x-catalog-view-switcher data-target-grid="#featured-grid-container" />
+        {{--
+          El conmutador de vista (rejilla/compacta/lista) vivía aquí, pero
+          sobre 4 tarjetas no cumple ninguna función real — y, al compartir
+          `rb_catalog_view_mode` en localStorage con el catálogo completo,
+          la preferencia elegida en la tienda le cambiaba el aspecto a la
+          home sin que el visitante lo pidiera.
+        --}}
+        <a href="{{ $shopUrl }}" class="shrink-0 text-xs font-bold uppercase tracking-widest text-ink-subtle transition-colors hover:text-ink">
+          {{ __('Ver todo', 'sage') }}
+        </a>
+      </div>
+
+      {{-- Tarjetas grandes con gap reducido (2 cols en móvil, 3 en md/lg, 4 en xl) --}}
+      <div id="featured-grid-container" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        @foreach ($featuredProducts as $index => $product)
+          <x-product-card :product="$product" list-id="home_featured" list-name="Destacados" :position="$index" />
+        @endforeach
+      </div>
+    </section>
+  @endif
+
+  {{--
+    Banda de ofertas: el composer ya calculaba $saleProducts (resolviendo
+    variaciones en oferta a su producto padre) pero la vista nunca lo
+    consumía — trabajo de servidor tirado a la basura y, peor, ofertas
+    reales que existían y no se mostraban en la página con más tráfico
+    del sitio.
+  --}}
+  @if ($saleProducts)
+    <section class="border-y border-line bg-surface-raised py-12 md:py-16" data-reveal>
+      <div class="rb-container">
+        <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-red-400">{{ __('Por tiempo limitado', 'sage') }}</p>
+            <h2 class="mt-2 text-2xl font-bold uppercase tracking-widest text-ink md:text-3xl">
+              {{ __('En oferta', 'sage') }}
+            </h2>
+          </div>
+
           <a href="{{ $shopUrl }}" class="shrink-0 text-xs font-bold uppercase tracking-widest text-ink-subtle transition-colors hover:text-ink">
             {{ __('Ver todo', 'sage') }}
           </a>
         </div>
-      </div>
 
-      {{-- Tarjetas grandes con gap reducido (2 cols en móvil, 3 en md/lg, 4 en xl) --}}
-      <div id="featured-grid-container" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 transition-all duration-300">
-        @foreach ($featuredProducts as $index => $product)
-          <x-product-card :product="$product" list-id="home_featured" list-name="Destacados" :position="$index" />
-        @endforeach
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          @foreach ($saleProducts as $index => $product)
+            <x-product-card :product="$product" list-id="home_sale" list-name="En oferta" :position="$index" />
+          @endforeach
+        </div>
       </div>
     </section>
   @endif
@@ -207,9 +249,18 @@
       <dl class="grid grid-cols-2 gap-px overflow-hidden border border-line bg-line">
         @foreach ([
           ['value' => (string) $contact['years'], 'label' => __('años en la ruta', 'sage'), 'target' => $contact['years'], 'suffix' => ''],
-          ['value' => '3', 'label' => __('puntos de servicio', 'sage'), 'target' => 3, 'suffix' => ''],
+          {{--
+            Era "3 puntos de servicio", hardcodeado, mientras contact_info()
+            sólo registra una dirección/taller (la del mapa embebido). Un
+            número que no coincide con nada verificable en el sitio es
+            justo el tipo de dato que un cliente puede señalar como
+            publicidad engañosa. `target => null` (como el stat de "∞" de
+            abajo): con un valor de 1 no tiene sentido animar un contador
+            de 0 a 1.
+          --}}
+          ['value' => '1', 'label' => __('taller propio en Bogotá', 'sage'), 'target' => null, 'suffix' => ''],
           ['value' => '48h', 'label' => __('para armado y ajuste', 'sage'), 'target' => 48, 'suffix' => 'h'],
-          ['value' => '∞', 'label' => __('garantía en marcos', 'sage'), 'target' => null, 'suffix' => '∞'],
+          ['value' => '∞', 'label' => __('garantía en marcos propios', 'sage'), 'target' => null, 'suffix' => '∞'],
         ] as $stat)
           <div class="bg-surface-raised px-6 py-8">
             <dt class="sr-only">{{ $stat['label'] }}</dt>
@@ -238,14 +289,12 @@
       {{ __('Trabajamos con marcas reconocidas', 'sage') }}
     </p>
     <ul class="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:gap-x-8">
-      @foreach (\App\brands_with_logo() as $brand)
+      @foreach (range(1, 6) as $num)
         <li class="h-16 md:h-24 w-auto flex items-center justify-center">
           <img
-            src="{{ \App\brand_logo_url($brand) }}"
-            alt="{{ $brand->name }}"
-            loading="lazy"
-            decoding="async"
-            class="h-full w-auto object-contain brand-logo-white-green"
+            src="{{ get_theme_file_uri('public/images/brands/' . $num . '.svg') }}"
+            alt="{{ __('Marca Aliada', 'sage') }}"
+            class="h-full w-auto object-contain"
           >
         </li>
       @endforeach
@@ -318,7 +367,7 @@
       <div class="grid grid-cols-1 divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
         @foreach ([
           ['icon' => 'truck', 'title' => __('Envío nacional', 'sage'), 'copy' => __('A todo Colombia en 2 a 5 días hábiles.', 'sage')],
-          ['icon' => 'shield-check', 'title' => __('Garantía de por vida', 'sage'), 'copy' => __('En marcos, respaldada desde 1998.', 'sage')],
+          ['icon' => 'shield-check', 'title' => __('Garantía de por vida', 'sage'), 'copy' => __('En marcos propios Racing Bike, desde 1998.', 'sage')],
           ['icon' => 'user', 'title' => __('Asesoría experta', 'sage'), 'copy' => __('Ajuste y recomendación personalizada.', 'sage')],
         ] as $feature)
           <div class="flex items-center gap-4 py-8 md:px-8 md:first:pl-0 md:last:pr-0">

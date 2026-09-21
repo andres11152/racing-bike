@@ -121,14 +121,12 @@
           {{ __('Trabajamos con marcas reconocidas', 'sage') }}
         </p>
         <ul class="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:gap-x-8">
-          @foreach (\App\brands_with_logo() as $brand)
+          @foreach (range(1, 6) as $num)
             <li class="h-16 md:h-24 w-auto flex items-center justify-center">
               <img
-                src="{{ \App\brand_logo_url($brand) }}"
-                alt="{{ $brand->name }}"
-                loading="lazy"
-                decoding="async"
-                class="h-full w-auto object-contain brand-logo-white-green"
+                src="{{ get_theme_file_uri('public/images/brands/' . $num . '.svg') }}"
+                alt="{{ __('Marca Aliada', 'sage') }}"
+                class="h-full w-auto object-contain"
               >
             </li>
           @endforeach
