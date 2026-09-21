@@ -1,6 +1,15 @@
+@php
+  // En una ficha de producto, el mensaje lleva el nombre, la referencia y
+  // el enlace del producto que se está viendo — así el vendedor sabe de
+  // entrada por cuál preguntan, en vez de tener que pedirlo por chat.
+  $whatsappHref = (function_exists('is_product') && is_product() && function_exists('rb_cro_get_smart_whatsapp_url'))
+    ? rb_cro_get_smart_whatsapp_url('product', wc_get_product(get_the_ID()))
+    : $contact['whatsapp_url'] . '?text=' . urlencode(__('Hola Racing Bike 1998, quisiera asesoría personalizada para elegir mi bicicleta.', 'sage'));
+@endphp
+
 <a
   data-whatsapp-button
-  href="{{ $contact['whatsapp_url'] }}?text={{ urlencode(__('Hola Racing Bike 1998, quisiera asesoría personalizada para elegir mi bicicleta.', 'sage')) }}"
+  href="{{ $whatsappHref }}"
   target="_blank"
   rel="noopener noreferrer"
   class="fixed bottom-5 right-4 md:bottom-10 md:right-6 z-40 flex items-center gap-2.5 rounded-full bg-[#167F3D] p-3 md:px-4 md:py-3 text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-[#136B34] hover:shadow-[0_0_25px_rgba(22,127,61,0.5)] active:scale-95 group"
