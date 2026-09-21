@@ -59,6 +59,7 @@ function rb_filter_taxonomies(): array
     return [
         'pa_marca' => __('Marca', 'sage'),
         'pa_talla' => __('Talla', 'sage'),
+        'pa_longitud-de-biela' => __('Longitud de biela', 'sage'),
         'pa_color-familia' => __('Color', 'sage'),
     ];
 }
@@ -88,26 +89,31 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
 
     static $cache = [];
 
-    if (array_key_exists($renderingTaxonomy, $cache)) {
-        return $cache[$renderingTaxonomy];
+    $queriedObject = get_queried_object();
+    $contextId = ($queriedObject instanceof \WP_Term) ? ($queriedObject->taxonomy . '_' . $queriedObject->term_id) : 'archive';
+    $getHash = md5(serialize($_GET));
+    $cacheKey = $renderingTaxonomy . '_' . $contextId . '_' . $getHash;
+
+    if (array_key_exists($cacheKey, $cache)) {
+        return $cache[$cacheKey];
     }
 
     $terms = get_terms(['taxonomy' => $renderingTaxonomy, 'hide_empty' => true, 'fields' => 'id=>slug']);
 
     if (is_wp_error($terms) || empty($terms) || ! function_exists('WC')) {
-        return $cache[$renderingTaxonomy] = [];
+        return $cache[$cacheKey] = [];
     }
 
     $baseTaxQuery = [
         ['taxonomy' => 'product_visibility', 'field' => 'name', 'terms' => ['exclude-from-catalog'], 'operator' => 'NOT IN'],
     ];
 
-    $queriedObject = get_queried_object();
     if ($queriedObject instanceof \WP_Term && in_array($queriedObject->taxonomy, ['product_cat', 'product_tag'], true)) {
         $baseTaxQuery[] = [
             'taxonomy' => $queriedObject->taxonomy,
             'field' => 'term_id',
             'terms' => [$queriedObject->term_id],
+            'include_children' => true,
         ];
     }
 
@@ -143,7 +149,7 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
     $counts = array_fill_keys(array_values($terms), 0);
 
     if (empty($productIds)) {
-        return $cache[$renderingTaxonomy] = $counts;
+        return $cache[$cacheKey] = $counts;
     }
 
     // Paso 2: un solo GROUP BY para contar cuántos de esos IDs tiene cada
@@ -171,7 +177,35 @@ function rb_layered_nav_term_counts(string $renderingTaxonomy): array
         }
     }
 
-    return $cache[$renderingTaxonomy] = $counts;
+    return $cache[$cacheKey] = $counts;
+}
+
+/**
+ * Orden ascendente para longitudes de biela (ej: 165 mm, 170 mm, 172.5 mm, 175 mm).
+ */
+function rb_crank_length_rank(mixed $val): float
+{
+    if (is_object($val) && isset($val->name)) {
+        $str = $val->name;
+    } elseif (is_object($val) && isset($val->slug)) {
+        $str = $val->slug;
+    } elseif (is_array($val) && isset($val['name'])) {
+        $str = $val['name'];
+    } else {
+        $str = (string) $val;
+    }
+
+    if (preg_match('/(\d+(?:\.\d+)?)/', $str, $matches)) {
+        return (float) $matches[1];
+    }
+
+    return 0.0;
+}
+
+function rb_sort_crank_length_terms(array $terms): array
+{
+    usort($terms, fn ($a, $b) => rb_crank_length_rank($a) <=> rb_crank_length_rank($b));
+    return $terms;
 }
 
 /**

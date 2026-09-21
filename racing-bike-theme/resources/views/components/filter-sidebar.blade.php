@@ -160,25 +160,42 @@
   @foreach ($taxonomies as $taxonomy => $label)
     @php
       // hide_empty siempre en true: antes pa_marca se mostraba completa
-      // (Continental, PRO...) aunque 0 productos la tuvieran asignada —
-      // clic en una marca fantasma y la tienda quedaba vacía sin motivo
-      // visible para quien compra.
+      // aunque 0 productos la tuvieran asignada.
       $terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => true]);
       if (is_wp_error($terms) || empty($terms)) continue;
 
       if ($taxonomy === 'pa_talla') {
         $terms = \App\rb_sort_size_terms($terms);
+      } elseif ($taxonomy === 'pa_longitud-de-biela') {
+        $terms = \App\rb_sort_crank_length_terms($terms);
       }
 
       $paramKey = 'filter_' . str_replace('pa_', '', $taxonomy);
       $queryTypeKey = 'query_type_' . str_replace('pa_', '', $taxonomy);
-      $selectedValues = isset($_GET[$paramKey]) ? explode(',', $_GET[$paramKey]) : [];
+      $selectedValues = isset($_GET[$paramKey]) ? array_filter(explode(',', (string) $_GET[$paramKey])) : [];
 
       // Conteo contextual: cuántos productos del resultado ACTUAL tendría
-      // cada término si se marcara, no el conteo global de todo el
-      // catálogo (ver app/catalog-filters.php — $term->count es global y
-      // llevaba a marcar opciones que vaciaban la tienda).
+      // cada término si se marcara, no el conteo global de todo el catálogo.
       $termCounts = \App\rb_layered_nav_term_counts($taxonomy);
+
+      // Si no hay ningún producto en el contexto actual con esta taxonomía y no hay nada seleccionado,
+      // no mostrar este grupo de filtro (ej: tallas de bicicleta en grupos/simuladores, longitud de biela en bicicletas/cascos).
+      if (empty($selectedValues) && array_sum($termCounts) === 0) {
+        continue;
+      }
+
+      // Filtrar términos visibles: solo mostrar aquellos que tienen productos disponibles (> 0)
+      // o que ya están seleccionados por el usuario para poder verlos y desmarcarlos.
+      // Esto elimina tallas de bicicletas en cascos, tallas de ruta en MTB, etc.
+      $visibleTerms = array_filter($terms, function ($term) use ($selectedValues, $termCounts) {
+        $isChecked = in_array($term->slug, $selectedValues, true);
+        $count = $termCounts[$term->slug] ?? 0;
+        return $isChecked || $count > 0;
+      });
+
+      if (empty($visibleTerms)) {
+        continue;
+      }
     @endphp
 
     {{--
@@ -191,57 +208,52 @@
       <legend class="text-xs font-bold uppercase tracking-wider text-ink p-0">{{ $label }}</legend>
 
       {{-- Lista de Checkbox Tradicional para todas las taxonomías (Marca, Talla, Longitud de biela, Color) --}}
-        <div class="space-y-2">
-          @foreach ($terms as $term)
-            @php
-              $isChecked = in_array($term->slug, $selectedValues);
-              $count = $termCounts[$term->slug] ?? 0;
-              $isDisabled = ! $isChecked && $count === 0;
+      <div class="space-y-2">
+        @foreach ($visibleTerms as $term)
+          @php
+            $isChecked = in_array($term->slug, $selectedValues);
+            $count = $termCounts[$term->slug] ?? 0;
+            $isDisabled = ! $isChecked && $count === 0;
 
-              $newValues = $isChecked
-                ? array_diff($selectedValues, [$term->slug])
-                : array_merge($selectedValues, [$term->slug]);
+            $newValues = $isChecked
+              ? array_diff($selectedValues, [$term->slug])
+              : array_merge($selectedValues, [$term->slug]);
 
-              $queryParams = $_GET;
-              unset($queryParams['paged']); // volver a la página 1 al cambiar de filtro
+            $queryParams = $_GET;
+            unset($queryParams['paged']); // volver a la página 1 al cambiar de filtro
 
-              if (! empty($newValues)) {
-                $queryParams[$paramKey] = implode(',', $newValues);
-                // WooCommerce filtra en AND entre valores de un mismo
-                // atributo por defecto: marcar "Shimano" + "GW" devolvía 0
-                // productos porque ninguno tiene las dos marcas a la vez.
-                // query_type=or hace que baste con cualquiera de los
-                // valores marcados, que es el comportamiento esperado de
-                // una casilla de selección múltiple.
-                $queryParams[$queryTypeKey] = 'or';
-              } else {
-                unset($queryParams[$paramKey], $queryParams[$queryTypeKey]);
-              }
+            if (! empty($newValues)) {
+              $queryParams[$paramKey] = implode(',', $newValues);
+              // query_type=or hace que baste con cualquiera de los valores marcados
+              $queryParams[$queryTypeKey] = 'or';
+            } else {
+              unset($queryParams[$paramKey], $queryParams[$queryTypeKey]);
+            }
 
-              $filterUrl = $currentUrl . (! empty($queryParams) ? '?' . http_build_query($queryParams) : '');
-            @endphp
+            $filterUrl = $currentUrl . (! empty($queryParams) ? '?' . http_build_query($queryParams) : '');
+          @endphp
 
-            <a
-              @if (! $isDisabled) href="{{ $filterUrl }}" @endif
-              role="checkbox"
-              aria-checked="{{ $isChecked ? 'true' : 'false' }}"
-              @if ($isDisabled) aria-disabled="true" @endif
-              class="flex items-center justify-between text-xs transition-colors {{ $isChecked ? 'font-bold text-ink' : 'text-ink-muted hover:text-ink' }} {{ $isDisabled ? 'opacity-30 pointer-events-none cursor-not-allowed' : '' }}"
-            >
-              <span class="flex items-center gap-2">
-                <span class="size-3.5 rounded border flex items-center justify-center transition-colors {{ $isChecked ? 'border-ink bg-ink text-surface' : 'border-line-strong bg-surface' }}">
-                  @if ($isChecked)
-                    <svg class="size-2.5 stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="3">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  @endif
-                </span>
-                <span>{{ $term->name }}</span>
+          <a
+            @if (! $isDisabled) href="{{ $filterUrl }}" @endif
+            role="checkbox"
+            aria-checked="{{ $isChecked ? 'true' : 'false' }}"
+            @if ($isDisabled) aria-disabled="true" @endif
+            class="flex items-center justify-between text-xs transition-colors {{ $isChecked ? 'font-bold text-ink' : 'text-ink-muted hover:text-ink' }} {{ $isDisabled ? 'opacity-30 pointer-events-none cursor-not-allowed' : '' }}"
+          >
+            <span class="flex items-center gap-2">
+              <span class="size-3.5 rounded border flex items-center justify-center transition-colors {{ $isChecked ? 'border-ink bg-ink text-surface' : 'border-line-strong bg-surface' }}">
+                @if ($isChecked)
+                  <svg class="size-2.5 stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                @endif
               </span>
-              <span class="text-[10px] text-ink-subtle">({{ $count }})</span>
-            </a>
-          @endforeach
-        </div>
+              <span>{{ $term->name }}</span>
+            </span>
+            <span class="text-[10px] text-ink-subtle">({{ $count }})</span>
+          </a>
+        @endforeach
+      </div>
     </fieldset>
   @endforeach
 </div>
