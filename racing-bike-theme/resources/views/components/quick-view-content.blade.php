@@ -9,8 +9,18 @@
     $mainImage = $imageId ? wp_get_attachment_image_url($imageId, 'large') : null;
     $mainImageAlt = $imageId ? get_post_meta($imageId, '_wp_attachment_image_alt', true) : $product->get_name();
 
-    // Galería completa (imagen principal + miniaturas adicionales)
-    $galleryIds = $product->get_gallery_image_ids();
+    // Galería completa (imagen principal + miniaturas adicionales y variaciones)
+    $galleryIds = (array) $product->get_gallery_image_ids();
+    if ($product->is_type('variable')) {
+        $varImageIds = [];
+        foreach ($product->get_children() as $cid) {
+            $t = (int) get_post_meta($cid, '_thumbnail_id', true);
+            if ($t && ! in_array($t, $varImageIds, true)) {
+                $varImageIds[] = $t;
+            }
+        }
+        $galleryIds = array_values(array_unique(array_merge($galleryIds, $varImageIds)));
+    }
     $allImages = [];
     if ($imageId) {
         $allImages[] = [
@@ -23,7 +33,7 @@
         foreach ($galleryIds as $gId) {
             $allImages[] = [
                 'thumb' => wp_get_attachment_image_url($gId, 'thumbnail'),
-                'full' => wp_get_attachment_image_url($gId, 'large'),
+                'full' => wp_get_attachment_image_url($gId, 'large') ?: wp_get_attachment_image_url($gId, 'full'),
                 'alt' => get_post_meta($gId, '_wp_attachment_image_alt', true) ?: $product->get_name(),
             ];
         }

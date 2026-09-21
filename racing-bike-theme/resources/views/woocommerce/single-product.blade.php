@@ -53,19 +53,44 @@
       $isBikeProduct = false;
       $bikeDiscipline = function_exists('\\App\\rb_get_product_discipline') ? \App\rb_get_product_discipline($product) : null;
 
-      $bikeCategoryTerm = get_term_by('slug', 'bicicletas', 'product_cat');
-      if ($bikeCategoryTerm) {
-        $bikeCategoryIds = array_merge(
-          [$bikeCategoryTerm->term_id],
-          get_term_children($bikeCategoryTerm->term_id, 'product_cat')
-        );
-        $productCategoryIds = wc_get_product_term_ids($product->get_id(), 'product_cat');
-        $isBikeProduct = (bool) array_intersect($bikeCategoryIds, $productCategoryIds);
+      $bikeCategorySlugs = ['bicicletas', 'marcos', 'cuadros', 'marcos-y-tenedores'];
+      $bikeCategoryIds = [];
+      foreach ($bikeCategorySlugs as $slug) {
+        $term = get_term_by('slug', $slug, 'product_cat');
+        if ($term) {
+          $bikeCategoryIds[] = $term->term_id;
+          $bikeCategoryIds = array_merge($bikeCategoryIds, get_term_children($term->term_id, 'product_cat'));
+        }
+      }
+      $productCategoryIds = wc_get_product_term_ids($product->get_id(), 'product_cat');
+      $isBikeProduct = (bool) array_intersect($bikeCategoryIds, $productCategoryIds);
+
+      // ...pero además el producto tiene que ofrecer tallas de verdad. Hay
+      // bicicletas cargadas sin atributo de talla (talla única, infantiles,
+      // cuadros sueltos) y ahí el banner recomendaba un marco que el
+      // cliente no podía seleccionar en ninguna parte de la ficha.
+      //
+      // El slug del atributo de talla no es uniforme en el catálogo del
+      // cliente (pa_talla, pa_talla-cuadro, talla), así que se busca por
+      // nombre o etiqueta, igual que en components/product-card.
+      $hasSizeAttribute = false;
+
+      foreach ($product->get_attributes() as $attribute) {
+        $attributeName = $attribute->get_name();
+        $attributeLabel = wc_attribute_label($attributeName);
+
+        $looksLikeSize = stripos($attributeName, 'talla') !== false
+          || stripos($attributeLabel, 'talla') !== false
+          || stripos($attributeName, 'size') !== false
+          || stripos($attributeLabel, 'size') !== false;
+
+        if ($looksLikeSize && $attribute->get_options()) {
+          $hasSizeAttribute = true;
+          break;
+        }
       }
 
-      if ($bikeDiscipline) {
-        $isBikeProduct = true;
-      }
+      $showSizeBanner = $isBikeProduct && $hasSizeAttribute;
     @endphp
 
     <div
@@ -81,11 +106,11 @@
           woocommerce_output_all_notices();
         @endphp
 
-        <div class="grid gap-10 md:grid-cols-2 md:gap-12 lg:gap-16">
+        <div class="grid gap-10 md:grid-cols-2 md:gap-12 lg:gap-16 overflow-hidden">
           <x-product-gallery :product="$product" />
 
           {{-- La columna de compra acompaña el scroll en pantallas altas. --}}
-          <div class="md:sticky md:top-28 md:self-start">
+          <div class="md:sticky md:top-28 md:self-start min-w-0">
             <div class="flex items-center justify-between">
               @if ($primaryCategory)
                 <p class="text-xs font-semibold uppercase tracking-widest text-ink-subtle">
@@ -140,7 +165,7 @@
               </div>
             @endif
 
-            @if ($isBikeProduct)
+            @if ($showSizeBanner)
               <div
                 id="rb-size-recommendation-banner"
                 class="mt-6"
@@ -205,96 +230,29 @@
 
       {{-- Descripción y ficha técnica --}}
       @php
-        // Los atributos usados para variaciones (talla, longitud de biela,
-        // etc.) ya se seleccionan arriba en el selector de compra; mostrarlos
-        // otra vez aquí es redundante y en variantes rotas confunde más.
-        $attributes = array_filter($product->get_attributes(), fn ($attribute) => ! $attribute->get_variation());
+        // Los atributos usados para variaciones (talla, longitud de biela, color, etc.)
+        // ya se seleccionan arriba en el selector de compra; mostrarlos otra vez en la
+        // ficha técnica es redundante. La ficha técnica debe lucir puramente las especificaciones de ingeniería.
+        $attributes = array_filter($product->get_attributes(), function ($attribute) use ($product) {
+          if ($attribute->get_variation()) {
+            return false;
+          }
+          if ($product->is_type('variable') && in_array($attribute->get_name(), ['pa_color', 'pa_talla', 'pa_color-familia', 'pa_longitud-de-biela', 'Color', 'Talla'], true)) {
+            return false;
+          }
+          return true;
+        });
       @endphp
 
-      @if ($product->get_description() || $attributes)
-        <div class="border-t border-line">
-          <div class="rb-container grid gap-12 py-14 md:grid-cols-2 md:py-20">
-            @if ($product->get_description())
-              <div>
-                <h2 class="text-xs font-semibold uppercase tracking-widest text-ink-subtle">
-                  {{ __('Descripción', 'sage') }}
-                </h2>
-                <div class="rb-prose mt-5 max-w-prose text-sm leading-relaxed text-ink-muted">
-                  {!! apply_filters('the_content', $product->get_description()) !!}
-                </div>
-              </div>
-            @endif
-
-            @if ($attributes)
-              <div>
-                <h2 class="text-xs font-semibold uppercase tracking-widest text-ink-subtle">
-                  {{ __('Ficha técnica', 'sage') }}
-                </h2>
-
-                <dl class="mt-5 border-t border-line">
-                  @foreach ($attributes as $attribute)
-                    @continue(! $attribute->get_visible())
-
-                    <div class="flex justify-between gap-6 border-b border-line py-3 text-sm">
-                      <dt class="text-ink-subtle">{{ wc_attribute_label($attribute->get_name()) }}</dt>
-                      <dd class="text-right text-ink">
-                        @if ($attribute->is_taxonomy())
-                          {{ implode(', ', wc_get_product_terms($product->get_id(), $attribute->get_name(), ['fields' => 'names'])) }}
-                        @else
-                          {{ implode(', ', $attribute->get_options()) }}
-                        @endif
-                      </dd>
-                    </div>
-                  @endforeach
-                </dl>
-              </div>
-            @endif
-          </div>
-        </div>
-      @endif
+      {{-- Tópicos Enterprise: Descripción, Ficha Técnica, Garantía/Envíos, Guía de Tallas --}}
+      <x-product-topics :product="$product" :specs="$attributes" />
 
       {{-- Reseñas de clientes (plugin racing-bike-reviews) --}}
       @if (function_exists('rb_reviews_render_section'))
-        <div class="rb-container">
+        <div class="rb-container py-12">
           {!! rb_reviews_render_section($product) !!}
         </div>
       @endif
-
-      {{-- Preguntas Frecuentes (FAQ Accordion) --}}
-      <section class="border-t border-line bg-surface-raised">
-        <div class="rb-container py-14 md:py-20">
-          <div class="mb-10 text-center">
-            <p class="text-xs font-semibold uppercase tracking-widest text-ink-subtle">{{ __('Resolviendo tus dudas', 'sage') }}</p>
-            <h2 class="mt-2 text-xl font-bold uppercase tracking-tight text-ink md:text-2xl">
-              {{ __('Preguntas frecuentes de compra', 'sage') }}
-            </h2>
-          </div>
-
-          <div class="divide-y divide-line border-y border-line">
-            @foreach ([
-              ['q' => __('¿Cómo entregan la bicicleta si estoy en Bogotá o en otra ciudad?', 'sage'), 'a' => __('En Bogotá entregamos tu bicicleta 100% armada, calibrada y lista para rodar sin costo adicional. Para envíos al resto de Colombia (Medellín, Cali, Barranquilla, Bucaramanga, etc.), va protegida en caja reforzada con transportadora aliada, pre-ensamblada al 90%.')],
-              ['q' => __('¿En qué consiste la garantía de por vida en el marco?', 'sage'), 'a' => __('Cubrimos cualquier defecto de fábrica o fallo estructural en el marco de por vida para el comprador original. Respaldado directamente en nuestra sede física desde 1998.')],
-              ['q' => __('¿Cómo sé cuál es mi talla ideal de marco?', 'sage'), 'a' => __('Puedes consultar nuestra Guía de Tallas interactiva o escribirnos al WhatsApp. Con tu estatura en cm y tiro de pierna, nuestros mecánicos te indican la medida exacta de marco.')],
-            ] as $index => $faq)
-              <div class="py-5">
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between gap-4 text-left text-sm font-bold text-ink"
-                  data-accordion-toggle
-                  aria-expanded="false"
-                  aria-controls="faq-panel-{{ $index }}"
-                >
-                  <span>{{ $faq['q'] }}</span>
-                  <x-icon name="chevron-down" class="size-4 shrink-0 text-ink-subtle transition-transform duration-200" data-accordion-icon />
-                </button>
-                <div id="faq-panel-{{ $index }}" class="hidden mt-3 text-xs leading-relaxed text-ink-muted">
-                  {{ $faq['a'] }}
-                </div>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      </section>
 
       {{-- Relacionados --}}
       @php

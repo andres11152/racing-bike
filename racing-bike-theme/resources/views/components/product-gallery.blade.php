@@ -3,11 +3,23 @@
 ])
 
 @php
-  // Sólo las imágenes reales del producto: mostrar la foto de otro producto
-  // (aunque sea "de relleno") es engañoso para el comprador.
+  // Sólo las imágenes reales del producto
   $mainId = $product->get_image_id();
-  $galleryIds = $product->get_gallery_image_ids();
-  $imageIds = array_values(array_filter(array_merge([$mainId], $galleryIds)));
+  $galleryIds = (array) $product->get_gallery_image_ids();
+
+  // Si es un producto variable, incluir también las imágenes asignadas a sus variaciones
+  if ($product->is_type('variable')) {
+    $varImageIds = [];
+    foreach ($product->get_children() as $cid) {
+      $t = (int) get_post_meta($cid, '_thumbnail_id', true);
+      if ($t && ! in_array($t, $varImageIds, true)) {
+        $varImageIds[] = $t;
+      }
+    }
+    $galleryIds = array_values(array_unique(array_merge($galleryIds, $varImageIds)));
+  }
+
+  $imageIds = array_values(array_filter(array_unique(array_merge([$mainId], $galleryIds))));
 
   $images = array_map(function($id) use ($product) {
     return [
@@ -18,6 +30,8 @@
       'alt' => get_post_meta($id, '_wp_attachment_image_alt', true) ?: $product->get_name(),
     ];
   }, $imageIds);
+
+  $images = array_values(array_filter($images, fn($img) => ! empty($img['full'])));
 @endphp
 
 <div
@@ -27,25 +41,45 @@
 >
   {{-- Tira Vertical de Miniaturas en ESCRITORIO (A la izquierda) --}}
   @if (count($images) > 1)
-    <div class="hidden md:flex flex-col gap-3 w-20 shrink-0 max-h-[580px] overflow-y-auto pr-1">
-      @foreach ($images as $index => $img)
-        <button
-          type="button"
-          class="relative aspect-square w-full rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer bg-surface-muted data-[active=true]:border-ink data-[active=true]:ring-2 data-[active=true]:ring-ink/20 border-line hover:border-line-strong"
-          data-gallery-thumb
-          data-index="{{ $index }}"
-          data-active="{{ $index === 0 ? 'true' : 'false' }}"
-          data-full="{{ $img['full'] }}"
-          aria-label="{{ sprintf(__('Ver ángulo %d', 'sage'), $index + 1) }}"
-        >
-          <img
-            src="{{ $img['thumb'] }}"
-            alt="{{ $img['alt'] }}"
-            loading="lazy"
-            class="size-full object-contain p-1"
+    <div class="hidden md:block relative w-20 lg:w-24 shrink-0">
+      <div
+        class="flex flex-col gap-3 max-h-[500px] lg:max-h-[580px] overflow-y-auto pr-1 pb-10 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-gallery-thumbs-track
+        style="mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 64px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 64px), transparent 100%);"
+      >
+        @foreach ($images as $index => $img)
+          <button
+            type="button"
+            class="group relative aspect-square w-full shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-surface-muted hover:bg-surface-raised data-[active=true]:border-primary data-[active=true]:ring-2 data-[active=true]:ring-primary/30 border-line hover:border-line-strong hover:scale-[1.02]"
+            data-gallery-thumb
+            data-index="{{ $index }}"
+            data-active="{{ $index === 0 ? 'true' : 'false' }}"
+            data-full="{{ $img['full'] }}"
+            aria-label="{{ sprintf(__('Ver ángulo %d', 'sage'), $index + 1) }}"
           >
-        </button>
-      @endforeach
+            <img
+              src="{{ $img['thumb'] }}"
+              alt="{{ $img['alt'] }}"
+              loading="lazy"
+              class="size-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
+            >
+          </button>
+        @endforeach
+      </div>
+
+      {{-- Gradiente / Blur inferior con micro-indicador de scroll si hay muchas imágenes --}}
+      @if (count($images) > 4)
+        <div
+          class="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-surface via-surface/80 to-transparent flex items-end justify-center pb-1.5 transition-opacity duration-300"
+          data-gallery-fade-indicator
+        >
+          <span class="inline-flex items-center justify-center size-6 rounded-full bg-white/10 text-white/80 border border-white/15 backdrop-blur-md shadow-lg animate-bounce">
+            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </div>
+      @endif
     </div>
   @endif
 
@@ -103,11 +137,11 @@
 
     {{-- Tira Horizontal de Miniaturas en MÓVIL (Al pie de la imagen principal) --}}
     @if (count($images) > 1)
-      <div class="flex md:hidden gap-3 overflow-x-auto pt-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div class="flex md:hidden gap-3 overflow-x-auto pt-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
         @foreach ($images as $index => $img)
           <button
             type="button"
-            class="relative aspect-square size-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer bg-surface-muted data-[active=true]:border-ink border-line"
+            class="relative aspect-square size-16 rounded-2xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer bg-surface-muted data-[active=true]:border-primary data-[active=true]:ring-2 data-[active=true]:ring-primary/30 border-line hover:border-line-strong"
             data-gallery-thumb
             data-index="{{ $index }}"
             data-active="{{ $index === 0 ? 'true' : 'false' }}"
@@ -118,7 +152,7 @@
               src="{{ $img['thumb'] }}"
               alt="{{ $img['alt'] }}"
               loading="lazy"
-              class="size-full object-contain p-1"
+              class="size-full object-contain p-1.5"
             >
           </button>
         @endforeach
