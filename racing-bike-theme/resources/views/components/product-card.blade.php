@@ -338,7 +338,17 @@
       <x-price :regular="$regularPrice" :sale="$salePrice" class="text-sm text-ink" />
 
       @if ($excerpt)
-        <p class="hidden md:group-[.view-mode-list]:block text-xs leading-relaxed text-ink-subtle line-clamp-2 pt-1 max-w-xl">
+        {{--
+          `md:group-[.view-mode-list]:block` nunca podía aplicar: Tailwind
+          exige que `.group` y `.view-mode-list` estén en el MISMO elemento,
+          pero `.group` vive en este `<article>` (ver arriba) y
+          `.view-mode-list` la pone el JS en el contenedor de la rejilla que
+          lo envuelve (ver initViewSwitcher en app.js). Nunca coincidían, así
+          que la vista "Lista" — la única que existe para mostrar esta
+          descripción — jamás la mostraba. Clase fija + regla normal en
+          app.css (`.view-mode-list article .rb-card-excerpt`) en su lugar.
+        --}}
+        <p class="rb-card-excerpt hidden text-xs leading-relaxed text-ink-subtle line-clamp-2 pt-1 max-w-xl">
           {{ $excerpt }}
         </p>
       @endif
