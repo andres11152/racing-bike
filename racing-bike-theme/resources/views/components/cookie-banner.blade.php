@@ -4,7 +4,15 @@
 
 <div
   id="cookie-banner"
-  class="fixed bottom-3 inset-x-3 md:bottom-6 md:right-6 md:left-auto md:max-w-md z-[200] transform translate-y-12 opacity-0 pointer-events-none transition-all duration-500 ease-out"
+  {{--
+    bottom-24/md:bottom-28 en vez de bottom-3/md:bottom-6: el botón de
+    WhatsApp y el de volver arriba viven en bottom-5/bottom-10 con right-4 y
+    left-4 respectivamente (ver whatsapp-button y scroll-up). Con el offset
+    anterior este banner —a ancho completo en móvil, z-[200]— quedaba encima
+    de ambos mientras el visitante no daba consentimiento, tapando el canal
+    de venta principal del sitio.
+  --}}
+  class="fixed bottom-24 inset-x-3 md:bottom-28 md:right-6 md:left-auto md:max-w-md z-[200] transform translate-y-12 opacity-0 pointer-events-none transition-all duration-500 ease-out"
   role="dialog"
   aria-labelledby="cookie-title"
   aria-describedby="cookie-desc"
