@@ -86,7 +86,7 @@
   {{-- Visor Principal con Zoom al Hover --}}
   <div class="flex-1 w-full relative">
     <div
-      class="relative aspect-4/5 md:aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-line group cursor-zoom-in shadow-2xl"
+      class="relative aspect-4/5 md:aspect-square overflow-hidden group cursor-zoom-in"
       data-gallery-main-container
     >
       {{--
@@ -103,7 +103,7 @@
         <img
           src="{{ $images[0]['full'] }}"
           alt="{{ $images[0]['alt'] }}"
-          class="size-full object-contain p-4 md:p-6 transition-transform duration-200 ease-out origin-center"
+          class="size-full object-contain transition-transform duration-200 ease-out origin-center"
           fetchpriority="high"
           decoding="async"
           data-gallery-main-img
