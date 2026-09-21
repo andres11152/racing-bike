@@ -173,13 +173,9 @@
       }
     }
 
-    // Logo real de la marca, editable en WooCommerce > Atributos > Marca
-    // (term meta, ver app/product-brands.php).
-    $brandLogoUrl = \App\product_brand_logo_url($product->get_id());
   } else {
     $excerpt = null;
     $galleryImages = $image ? [['url' => $image, 'alt' => $imageAlt]] : [];
-    $brandLogoUrl = null;
     $discountPercent = ($salePrice && $regularPrice && (float) $regularPrice > 0)
       ? (int) round((((float) $regularPrice - (float) $salePrice) / (float) $regularPrice) * 100)
       : null;
@@ -277,15 +273,6 @@
           <x-badge variant="outline">{{ __('Agotado', 'sage') }}</x-badge>
         @endif
       </div>
-
-      {{-- Logo de marca en la esquina superior derecha (solo el logo directo, sin contenedor de fondo) --}}
-      @if ($brandLogoUrl)
-        <img
-          src="{{ $brandLogoUrl }}"
-          alt="Marca"
-          class="absolute top-2.5 right-2.5 md:top-3 md:right-3 z-20 h-6 md:h-9 w-auto object-contain brightness-0 invert opacity-90 pointer-events-none drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
-        >
-      @endif
 
       @if ($product)
         {{-- Botón Wishlist (Heart) — siempre visible, independiente del stock --}}
