@@ -42,9 +42,10 @@
         'price' => $trackViewPrice !== '' ? (float) $trackViewPrice : null,
       ];
 
-      // Logo real de la marca, editable en WooCommerce > Atributos > Marca
-      // (term meta, ver app/product-brands.php).
-      $brandLogoUrl = \App\product_brand_logo_url($product->get_id());
+      // Nombre de la marca (pa_marca), sin logo — mismo criterio que el
+      // filtro de la tienda: solo texto, nada de SVGs ni imágenes.
+      $brandTerms = get_the_terms($product->get_id(), 'pa_marca');
+      $brandName = ($brandTerms && ! is_wp_error($brandTerms)) ? reset($brandTerms)->name : null;
 
       // El banner de "Talla Biomecánica Recomendada" solo tiene sentido en
       // bicicletas (que tienen talla de cuadro). Se determina por
@@ -118,14 +119,10 @@
                 </p>
               @endif
 
-              {{-- Logo de marca en la ficha de producto --}}
-              @if ($brandLogoUrl)
-                <div class="h-12 md:h-16 w-28 flex items-center justify-center bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-1.5" title="Marca">
-                  <img
-                    src="{{ $brandLogoUrl }}"
-                    alt="Marca"
-                    class="h-full w-auto object-contain brightness-0 invert opacity-100"
-                  >
+              {{-- Marca en texto: sin logo ni SVG, solo el nombre. --}}
+              @if ($brandName)
+                <div class="h-12 md:h-16 flex items-center justify-center bg-white/[0.04] border border-white/[0.08] rounded-xl px-4" title="Marca">
+                  <span class="text-xs md:text-sm font-bold uppercase tracking-wider text-ink">{{ $brandName }}</span>
                 </div>
               @endif
             </div>
