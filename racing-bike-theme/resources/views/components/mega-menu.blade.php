@@ -1,52 +1,50 @@
 {{--
-  Navegación de escritorio. Los paneles se abren por :hover y :focus-within,
-  de modo que el teclado funciona sin JS; app.js sólo añade el cierre con Escape.
+  Navegación de escritorio Enterprise. Los paneles se abren por :hover y :focus-within,
+  de modo que el teclado funciona sin JS; app.js añade el cierre con Escape.
 --}}
-<nav class="hidden md:block" aria-label="{{ __('Navegación principal', 'sage') }}" data-mega-menu>
-  <ul class="flex items-center gap-7">
+<nav class="hidden lg:block" aria-label="{{ __('Navegación principal', 'sage') }}" data-mega-menu>
+  <ul class="flex items-center gap-4 xl:gap-6 2xl:gap-8">
     @foreach ($primaryMenu as $item)
       <li class="group static">
         <a
           href="{{ $item['url'] }}"
-          class="flex items-center gap-1 py-6 text-xs font-medium uppercase tracking-widest transition-colors {{ $item['current'] ? 'text-ink' : 'text-ink-muted hover:text-ink' }}"
+          class="relative flex items-center gap-1.5 py-7 text-xs xl:text-[13px] font-bold uppercase tracking-[0.1em] transition-all {{ $item['current'] ? 'text-emerald-400' : 'text-ink-muted hover:text-white' }}"
           @if ($item['children']) aria-haspopup="true" aria-expanded="false" @endif
         >
-          {{ $item['title'] }}
+          <span>{{ $item['title'] }}</span>
 
           @if ($item['children'])
-            <x-icon name="chevron-down" class="size-3 transition-transform group-hover:rotate-180" />
+            <x-icon name="chevron-down" class="size-3 text-ink-subtle transition-transform duration-200 group-hover:rotate-180 group-hover:text-emerald-400" />
           @endif
+
+          {{-- Línea indicadora activa / hover --}}
+          <span class="absolute bottom-0 inset-x-0 h-0.5 bg-emerald-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-center {{ $item['current'] ? 'scale-x-100' : '' }}"></span>
         </a>
 
         @if ($item['children'])
           {{--
-            El enlace mide 64px de alto pero el header mide 113px (lo marca el
-            logo), y como la fila está centrada quedan ~24px muertos entre el
-            enlace y el panel, que arranca en `top-full` del header. Al bajar
-            el ratón hacia el panel se cruzaba ese hueco, se perdía el :hover
-            y el panel se cerraba.
-
-            `before:*` añade un puente invisible que cubre exactamente esa
-            franja. Al ser hijo del panel, mantiene el :hover del <li>. Sólo
-            está activo con el panel abierto (cuando está cerrado hereda
-            `visibility: hidden` y no recibe puntero), y su alto es justo el
-            del hueco, así que no tapa los enlaces ni bloquea pasar a otro
-            elemento del menú.
+            Mega Panel Dropdown con Glassmorphism Enterprise
+            Puente invisible before:* para cubrir el espacio entre enlace y panel
           --}}
           <div
-            class="invisible absolute inset-x-0 top-full z-40 border-y border-line bg-surface-raised opacity-0 transition-[opacity,visibility] duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 before:absolute before:inset-x-0 before:bottom-full before:h-6 before:content-['']"
+            class="invisible absolute inset-x-0 top-full z-40 border-y border-white/[0.08] bg-surface-raised/98 backdrop-blur-2xl shadow-2xl opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 before:absolute before:inset-x-0 before:bottom-full before:h-4 before:content-['']"
             data-mega-panel
           >
-            <div class="rb-container grid gap-8 py-10 md:grid-cols-4">
+            <div class="rb-container grid gap-8 py-8 md:grid-cols-4">
+              {{-- Subcategorías en cuadrícula limpia --}}
               <div class="md:col-span-3">
+                <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-400 mb-4 pb-2 border-b border-white/[0.06]">
+                  {{ __('Colección', 'sage') }} · {{ $item['title'] }}
+                </p>
                 <ul class="grid grid-cols-2 gap-x-8 gap-y-3 lg:grid-cols-3">
                   @foreach ($item['children'] as $child)
                     <li>
                       <a
                         href="{{ $child['url'] }}"
-                        class="block py-1 text-sm text-ink-muted transition-colors hover:text-ink"
+                        class="group/link flex items-center gap-2 py-1.5 text-sm text-ink-muted transition-all hover:text-white"
                       >
-                        {{ $child['title'] }}
+                        <span class="size-1.5 rounded-full bg-white/20 group-hover/link:bg-emerald-400 transition-colors shrink-0"></span>
+                        <span class="group-hover/link:translate-x-1 transition-transform duration-150">{{ $child['title'] }}</span>
                       </a>
                     </li>
                   @endforeach
@@ -54,28 +52,36 @@
 
                 <a
                   href="{{ $item['url'] }}"
-                  class="mt-8 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-ink transition-colors hover:text-ink-muted"
+                  class="mt-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400 transition-colors hover:text-emerald-300 group/all"
                 >
-                  {{ __('Ver todo en', 'sage') }} {{ $item['title'] }}
-                  <x-icon name="chevron-right" class="size-3.5" />
+                  {{ __('Ver catálogo completo de', 'sage') }} {{ $item['title'] }}
+                  <x-icon name="chevron-right" class="size-3.5 group-hover/all:translate-x-1 transition-transform" />
                 </a>
               </div>
 
+              {{-- Tarjeta destacada con imagen de categoría --}}
               <a href="{{ $item['url'] }}" class="group/feat block">
-                <div class="aspect-4/3 overflow-hidden bg-surface-muted">
+                <div class="aspect-4/3 overflow-hidden rounded-2xl bg-surface-muted border border-white/[0.08] relative group-hover/feat:border-emerald-500/40 transition-all shadow-xl">
                   @if ($item['image'])
                     <img
                       src="{{ $item['image'] }}"
                       alt="{{ $item['title'] ?? __('Categoría', 'sage') }}"
                       loading="lazy"
                       decoding="async"
-                      class="size-full object-cover transition-transform duration-500 group-hover/feat:scale-105"
+                      class="size-full object-cover transition-transform duration-700 group-hover/feat:scale-105"
                     >
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
+                      <div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block mb-0.5">{{ __('Destacado', 'sage') }}</span>
+                        <span class="text-sm font-bold uppercase tracking-wider">{{ $item['title'] }}</span>
+                      </div>
+                      <div class="size-8 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur group-hover/feat:bg-emerald-500 group-hover/feat:text-black transition-colors">
+                        <x-icon name="chevron-right" class="size-4" />
+                      </div>
+                    </div>
                   @endif
                 </div>
-                <p class="mt-3 text-xs font-medium uppercase tracking-widest text-ink">
-                  {{ $item['title'] }}
-                </p>
               </a>
             </div>
           </div>

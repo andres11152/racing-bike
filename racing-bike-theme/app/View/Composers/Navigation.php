@@ -80,9 +80,11 @@ class Navigation extends Composer
                     $url = preg_replace('#/shop(/|\?|$)#', '/tienda$1', $url);
                 }
 
+                $title = str_ireplace(['Bicicletas y Frames', 'Frames'], ['Bicicletas y Marcos', 'Marcos'], $item->title);
+
                 return [
                     'id' => (int) $item->ID,
-                    'title' => $item->title,
+                    'title' => $title,
                     'url' => $url,
                     'current' => $this->isCurrent($item),
                     'image' => $this->thumbnail($item),

@@ -251,6 +251,48 @@ details.group > summary::marker {
   @apply no-underline;
 }
 
+/* -----------------------------------------------------------------------
+ | MOBILE OVERFLOW FIX — Ficha de Producto
+ |
+ | Varias piezas del marcado de WooCommerce inyectan contenido con anchos
+ | fijos (imgs con width="2000", tablas de especificaciones, embeds) que
+ | desbordaban la pantalla en 360-412px.
+ |
+ | La regla base `html { overflow-x: clip }` ya estaba en app.css, pero
+ | no alcanza a contener elementos con position:absolute/fixed o que viven
+ | en un stacking context propio. Estos selectores añaden capas adicionales
+ | de contención donde el scroll horizontal nunca tiene sentido.
+ * -------------------------------------------------------------------- */
+
+/* Toda la columna de producto (gallery + buy column) no debe desbordar */
+.single-product .main,
+.single-product [class*="rb-container"] {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Selector de swatches: garantizar que el flex-wrap no desborde */
+.rb-swatches {
+  max-width: 100%;
+}
+
+/* Imágenes nativas de WooCommerce con width/height fijos en el atributo */
+.woocommerce-product-gallery img,
+.woocommerce-product-gallery__image img,
+.woocommerce .product .images img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Tabla de especificaciones en la ficha de producto */
+.woocommerce-product-attributes,
+.shop_attributes {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* --- Ficha de producto: precio --- */
 
 .rb-woo-price .price {
@@ -274,26 +316,47 @@ details.group > summary::marker {
 /* Fila de cantidad + botón, uno junto al otro. */
 .rb-woo-add-to-cart .cart:not(.variations_form),
 .rb-woo-add-to-cart .variations_button {
-  @apply flex flex-row flex-wrap items-center gap-3 mt-3;
+  @apply flex flex-row items-center gap-3 mt-3 w-full;
+}
+
+.screen-reader-text,
+.quantity label.screen-reader-text,
+.rb-woo-add-to-cart .quantity label {
+  border: 0 !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  clip-path: inset(50%) !important;
+  height: 1px !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  position: absolute !important;
+  width: 1px !important;
+  white-space: nowrap !important;
 }
 
 .rb-woo-add-to-cart .quantity {
-  @apply inline-flex items-center rounded-full border border-line bg-surface-raised/80 px-2 py-0.5 shadow-inner;
+  @apply inline-flex items-center justify-between rounded-full border border-white/15 bg-white/[0.04] p-1 shadow-sm transition-all hover:border-white/25 h-12 shrink-0;
 }
 
-.rb-woo-add-to-cart .quantity input[type="number"] {
-  @apply w-12 border-0 bg-transparent py-2 text-center text-xs font-bold text-white focus:outline-none;
+.rb-woo-add-to-cart .quantity .rb-qty-btn {
+  @apply size-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer select-none bg-transparent border-0;
+}
+
+.rb-woo-add-to-cart .quantity input[type="number"],
+.rb-woo-add-to-cart .quantity input.qty {
+  @apply w-10 sm:w-12 border-0 bg-transparent py-0 text-center text-sm font-bold text-white focus:outline-none select-none;
   appearance: textfield;
 }
 
 .rb-woo-add-to-cart .quantity input::-webkit-inner-spin-button,
 .rb-woo-add-to-cart .quantity input::-webkit-outer-spin-button {
   appearance: none;
+  margin: 0;
 }
 
 .rb-woo-add-to-cart .single_add_to_cart_button,
 .rb-woo-add-to-cart button[type="submit"] {
-  @apply flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-black uppercase tracking-wider px-6 py-3.5 text-xs hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-lg cursor-pointer;
+  @apply flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-black uppercase tracking-wider px-6 text-xs hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-lg cursor-pointer h-12;
 }
 
 .rb-woo-add-to-cart .single_add_to_cart_button:disabled,
@@ -388,14 +451,131 @@ details.group > summary::marker {
   @apply text-xs uppercase tracking-widest text-red-400;
 }
 
-/* --- Contenido enriquecido de la descripción --- */
+/* --- Contenido enriquecido de la descripción (Enterprise Topics) --- */
 
-.rb-prose p + p {
-  @apply mt-4;
+.rb-prose {
+  @apply text-sm md:text-base leading-relaxed text-zinc-300 font-normal w-full max-w-none;
+}
+
+.rb-prose p {
+  @apply mb-5 leading-relaxed max-w-5xl;
+}
+
+.rb-prose p:last-child {
+  @apply mb-0;
+}
+
+.rb-prose h2,
+.rb-prose h3,
+.rb-prose h4 {
+  @apply mt-10 mb-4 font-bold uppercase tracking-wider text-white;
+}
+
+.rb-prose h2 {
+  @apply text-lg md:text-xl border-b border-white/[0.08] pb-2 text-emerald-400 max-w-5xl;
+}
+
+.rb-prose h3 {
+  @apply text-base md:text-lg text-zinc-100 max-w-5xl;
 }
 
 .rb-prose ul {
-  @apply mt-4 list-disc space-y-1 pl-5;
+  @apply my-6 space-y-2.5 pl-6 list-disc text-zinc-300 max-w-5xl;
+}
+
+.rb-prose ol {
+  @apply my-6 space-y-2.5 pl-6 list-decimal text-zinc-300 max-w-5xl;
+}
+
+.rb-prose li {
+  @apply leading-relaxed;
+}
+
+.rb-prose strong,
+.rb-prose b {
+  @apply font-bold text-white;
+}
+
+.rb-prose a {
+  @apply text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors;
+}
+
+/* Ocultar tabla de contenido SEO redundante dentro del acordeón si existiera */
+.rb-prose .rb-seo-toc,
+.rb-prose .rank-math-toc-block {
+  @apply hidden;
+}
+
+/* Imagen dentro de la descripción — máximo ancho disponible en mobile */
+.rb-prose img {
+  @apply my-10 mx-auto block max-w-full w-auto h-auto rounded-3xl border border-white/[0.08] bg-black/40 p-3 md:p-5 shadow-2xl transition-transform duration-300 hover:scale-[1.01];
+  /* Forzar que no desborde aunque WordPress inyecte width/height fijos en el atributo */
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Tablas dentro de la descripción del producto — scroll horizontal en mobile
+   en vez de desbordamiento. WooCommerce y el editor insertan <table> con
+   columnas de ancho fijo que en 360-412px no caben. */
+.rb-prose table {
+  @apply my-8 w-full min-w-0 text-sm border-collapse;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rb-prose thead {
+  @apply text-xs uppercase tracking-widest text-emerald-400;
+}
+
+.rb-prose th,
+.rb-prose td {
+  @apply px-3 py-2 border border-white/[0.08] text-left align-top;
+  min-width: 80px;
+}
+
+.rb-prose th {
+  @apply font-bold text-white bg-white/[0.04];
+}
+
+.rb-prose td {
+  @apply text-zinc-300;
+}
+
+/* Videos e iframes (embeds de YouTube, mapas) en la descripción */
+.rb-prose iframe,
+.rb-prose video {
+  max-width: 100% !important;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+/* Bloques de código largo — scroll horizontal en vez de desbordamiento */
+.rb-prose pre,
+.rb-prose code {
+  @apply text-xs leading-relaxed;
+  max-width: 100%;
+  overflow-x: auto;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* --- Tópicos Desplegables: Control de Ícono Dinámico + / − --- */
+
+[data-accordion-toggle][aria-expanded="false"] .rb-topic-minus {
+  display: none !important;
+}
+
+[data-accordion-toggle][aria-expanded="false"] .rb-topic-plus {
+  display: flex !important;
+}
+
+[data-accordion-toggle][aria-expanded="true"] .rb-topic-plus {
+  display: none !important;
+}
+
+[data-accordion-toggle][aria-expanded="true"] .rb-topic-minus {
+  display: flex !important;
 }
 
 /* --- Estilos para la tabla del Carrito y Checkout de WooCommerce --- */

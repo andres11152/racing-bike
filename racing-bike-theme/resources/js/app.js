@@ -1,4 +1,3 @@
-import './bike-builder.js';
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 /* -------------------------------------------------------------------------
@@ -11,25 +10,49 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
  * ---------------------------------------------------------------------- */
 
 function initHeroVideos() {
+  const carousel = document.querySelector('[data-carousel]');
+  const track = carousel ? carousel.querySelector('[data-carousel-track]') : null;
   const videos = document.querySelectorAll('video[data-video-src]');
   if (!videos.length) return;
 
   const desktopQuery = window.matchMedia('(min-width: 768px)');
   const variantFor = () => (desktopQuery.matches ? 'desktop' : 'mobile');
 
-  const activate = () => {
+  const activateVideo = (video) => {
     const variant = variantFor();
+    if (video.dataset.videoVariant !== variant || video.dataset.videoActivated) return;
+    video.dataset.videoActivated = 'true';
+    video.src = video.dataset.videoSrc;
+    video.load();
+    video.play().catch(() => {});
+  };
+
+  const checkVisibleVideos = () => {
+    if (!track) return;
+    const trackLeft = track.scrollLeft;
+    const trackWidth = track.clientWidth;
+
     videos.forEach((video) => {
-      if (video.dataset.videoVariant !== variant || video.dataset.videoActivated) return;
-      video.dataset.videoActivated = 'true';
-      video.src = video.dataset.videoSrc;
-      video.load();
-      video.play().catch(() => {});
+      const slide = video.closest('[data-carousel-slide]');
+      if (!slide) return;
+      const slideLeft = slide.offsetLeft;
+      const slideWidth = slide.offsetWidth;
+
+      if (slideLeft < trackLeft + trackWidth + 10 && slideLeft + slideWidth > trackLeft - 10) {
+        activateVideo(video);
+      }
     });
   };
 
-  activate();
-  desktopQuery.addEventListener('change', activate);
+  checkVisibleVideos();
+
+  if (track) {
+    track.addEventListener('scroll', checkVisibleVideos, { passive: true });
+  }
+
+  desktopQuery.addEventListener('change', () => {
+    checkVisibleVideos();
+  });
 }
 
 initHeroVideos();
@@ -166,8 +189,28 @@ document.addEventListener('keydown', (event) => {
   const bar = document.querySelector('[data-announcement-bar]');
   if (!bar) return;
 
+  // El comentario de arriba ya decía "descarte persistente", pero sólo
+  // ocultaba el nodo en memoria: recargar la página, o navegar a otra,
+  // la volvía a mostrar siempre. localStorage es lo mínimo para que
+  // "cerrar" signifique cerrar.
+  const STORAGE_KEY = 'rb_announcement_dismissed';
+
+  try {
+    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+      bar.style.display = 'none';
+      return;
+    }
+  } catch (e) {
+    // localStorage no disponible (navegación privada, cuota llena, etc.): degradar en silencio.
+  }
+
   bar.querySelector('[data-announcement-dismiss]')?.addEventListener('click', () => {
     bar.style.display = 'none';
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch (e) {
+      // Sin persistencia disponible: el cierre sigue funcionando para esta carga de página.
+    }
   });
 })();
 
@@ -684,11 +727,14 @@ function syncVariationImage(form) {
   if (window.jQuery) {
     variations = window.jQuery(form).data('product_variations');
   }
-  if (!variations && form.dataset.product_variations) {
-    try {
-      variations = JSON.parse(form.dataset.product_variations);
-    } catch {
-      variations = null;
+  if (!variations || variations === 'false' || variations === false) {
+    const raw = form.dataset.product_variations || form.getAttribute('data-product_variations');
+    if (raw && raw !== 'false') {
+      try {
+        variations = JSON.parse(raw);
+      } catch {
+        variations = null;
+      }
     }
   }
 
@@ -697,17 +743,17 @@ function syncVariationImage(form) {
   const tallaSelect = selects.find((s) => /talla|size/i.test(s.name || s.id || s.dataset.attribute_name || ''));
   const selectedTalla = tallaSelect?.value || '';
 
-  const normalize = (v) => String(v || '').trim().toLowerCase();
-  const targetColor = normalize(selectedColor);
-  const targetTalla = normalize(selectedTalla);
+  const cleanStr = (v) => String(v || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  const targetColor = cleanStr(selectedColor);
+  const targetTalla = cleanStr(selectedTalla);
 
-  // 1. Intentar coincidir color y talla a la vez
+  // 1. Intentar coincidir color y talla a la vez con variación que tenga imagen válida
   let match = null;
   if (selectedTalla) {
     match = variations.find((v) => {
-      if (!v || !v.attributes) return false;
-      const matchColor = Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && (normalize(val) === targetColor || val === ''));
-      const matchTalla = Object.entries(v.attributes).some(([k, val]) => (/talla/i.test(k) || /size/i.test(k)) && (normalize(val) === targetTalla || val === ''));
+      if (!v || !v.attributes || !v.image || (!v.image.full_src && !v.image.src && !v.image.url)) return false;
+      const matchColor = Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && (cleanStr(val) === targetColor || val === ''));
+      const matchTalla = Object.entries(v.attributes).some(([k, val]) => (/talla/i.test(k) || /size/i.test(k)) && (cleanStr(val) === targetTalla || val === ''));
       return matchColor && matchTalla;
     });
   }
@@ -715,8 +761,8 @@ function syncVariationImage(form) {
   // 2. Si no hay match con talla o no hay talla seleccionada, coincidir por color
   if (!match) {
     match = variations.find((v) => {
-      if (!v || !v.attributes) return false;
-      return Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && normalize(val) === targetColor);
+      if (!v || !v.attributes || !v.image || (!v.image.full_src && !v.image.src && !v.image.url)) return false;
+      return Object.entries(v.attributes).some(([k, val]) => /color/i.test(k) && (cleanStr(val) === targetColor || val === ''));
     });
   }
 
@@ -891,25 +937,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 window.initSwatches();
 /* -------------------------------------------------------------------------
- | Selector de cantidad
+ | Selector de cantidad Enterprise (Ficha de producto y Carrito)
  * ---------------------------------------------------------------------- */
 
-document.querySelectorAll('[data-quantity-input]').forEach((wrapper) => {
-  const input = wrapper.querySelector('[data-quantity-value]');
-  const decrement = wrapper.querySelector('[data-quantity-decrement]');
-  const increment = wrapper.querySelector('[data-quantity-increment]');
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.rb-qty-btn, [data-quantity-decrement], [data-quantity-increment]');
+  if (!btn) return;
 
-  decrement?.addEventListener('click', () => {
-    const min = Number(input.min) || 1;
-    input.value = String(Math.max(min, Number(input.value) - 1));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  const wrapper = btn.closest('.quantity, [data-quantity-input], .rb-quantity-pill');
+  if (!wrapper) return;
 
-  increment?.addEventListener('click', () => {
-    const max = input.max ? Number(input.max) : Infinity;
-    input.value = String(Math.min(max, Number(input.value) + 1));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  const input = wrapper.querySelector('input[type="number"], input.qty, [data-quantity-value]');
+  if (!input) return;
+
+  const isMinus = btn.classList.contains('rb-qty-minus') || btn.hasAttribute('data-quantity-decrement');
+  const isPlus = btn.classList.contains('rb-qty-plus') || btn.hasAttribute('data-quantity-increment');
+  if (!isMinus && !isPlus) return;
+
+  const currentVal = parseFloat(input.value) || 1;
+  const min = input.min !== '' ? parseFloat(input.min) : 1;
+  const max = input.max !== '' ? parseFloat(input.max) : Infinity;
+  const step = parseFloat(input.step) || 1;
+
+  if (isMinus) {
+    const newVal = Math.max(min, currentVal - step);
+    input.value = newVal;
+  } else if (isPlus) {
+    const newVal = Math.min(max, currentVal + step);
+    input.value = newVal;
+  }
+
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
 });
 
 /* -------------------------------------------------------------------------
@@ -1496,6 +1555,29 @@ document.addEventListener('click', (e) => {
     });
 });
 
+// Sincronización reactiva del badge del carrito (esquina superior derecha, solo visible cuando count >= 1)
+function syncCartBadge() {
+  document.querySelectorAll('[data-cart-count]').forEach((badge) => {
+    const count = parseInt(badge.textContent.trim(), 10) || 0;
+    if (count > 0) {
+      badge.classList.remove('hidden', 'opacity-0', 'scale-75');
+      badge.classList.add('scale-100', 'opacity-100');
+      badge.style.display = '';
+    } else {
+      badge.classList.add('hidden', 'opacity-0', 'scale-75');
+      badge.classList.remove('scale-100', 'opacity-100');
+      badge.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', syncCartBadge);
+if (window.jQuery) {
+  window.jQuery(document.body).on('added_to_cart removed_from_cart wc_fragments_refreshed wc_fragments_loaded', () => {
+    setTimeout(syncCartBadge, 30);
+  });
+}
+
 /* -------------------------------------------------------------------------
  | Scroll Reveal Observer para micro-animaciones al desplazarse
  * ---------------------------------------------------------------------- */
@@ -1598,12 +1680,44 @@ document.addEventListener('click', (e) => {
     if (!url) return;
     variationOverrideUrl = url;
 
-    // Desactivar el highlight de las miniaturas de galería general mientras se muestra la variación
-    thumbsByIndex.forEach((thumbsAtIndex) => {
-      thumbsAtIndex.forEach((thumb) => {
-        thumb.dataset.active = 'false';
-      });
+    // Normalizar URLs para encontrar la miniatura correspondiente en la galería
+    const getCleanPath = (u) => {
+      try {
+        const parsed = new URL(u, window.location.href);
+        return parsed.pathname;
+      } catch {
+        return String(u || '').split('?')[0];
+      }
+    };
+
+    const targetPath = getCleanPath(url);
+    const matchedThumbIndex = imageUrls.findIndex((u) => {
+      if (!u) return false;
+      const cleanU = getCleanPath(u);
+      return cleanU === targetPath || cleanU.endsWith(targetPath) || targetPath.endsWith(cleanU);
     });
+
+    if (matchedThumbIndex !== -1) {
+      currentIndex = matchedThumbIndex;
+      thumbsByIndex.forEach((thumbsAtIndex, idx) => {
+        thumbsAtIndex.forEach((thumb) => {
+          const isActive = idx === matchedThumbIndex;
+          thumb.dataset.active = isActive ? 'true' : 'false';
+          if (isActive) {
+            thumb.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+          }
+        });
+      });
+      if (lightboxCounter) {
+        lightboxCounter.textContent = `${matchedThumbIndex + 1} / ${totalImages}`;
+      }
+    } else {
+      thumbsByIndex.forEach((thumbsAtIndex) => {
+        thumbsAtIndex.forEach((thumb) => {
+          thumb.dataset.active = 'false';
+        });
+      });
+    }
 
     if (mainImg) {
       mainImg.removeAttribute('srcset');
@@ -1611,8 +1725,7 @@ document.addEventListener('click', (e) => {
       if (alt) mainImg.alt = alt;
       mainImg.dataset.full = url;
       // Si el puntero estaba sobre la foto cuando se cambió de talla/color,
-      // el zoom de lupa seguía aplicado sobre la imagen nueva y se veía
-      // ampliada y descuadrada. La imagen nueva siempre entra sin zoom.
+      // la imagen nueva siempre entra sin zoom.
       mainImg.style.transform = 'scale(1)';
       mainImg.style.transformOrigin = 'center center';
     }
@@ -1625,7 +1738,7 @@ document.addEventListener('click', (e) => {
   function clearVariationImage() {
     if (!variationOverrideUrl) return;
     variationOverrideUrl = null;
-    setActiveImage(currentIndex);
+    setActiveImage(0);
   }
 
   window.rbApplyVariationImage = applyVariationImage;
@@ -1648,7 +1761,11 @@ document.addEventListener('click', (e) => {
 
     thumbsByIndex.forEach((thumbsAtIndex, idx) => {
       thumbsAtIndex.forEach((thumb) => {
-        thumb.dataset.active = idx === index ? 'true' : 'false';
+        const isActive = idx === index;
+        thumb.dataset.active = isActive ? 'true' : 'false';
+        if (isActive) {
+          thumb.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        }
       });
     });
 
@@ -1677,6 +1794,16 @@ document.addEventListener('click', (e) => {
       setActiveImage(idx);
     });
   });
+
+  // Control de scroll y desvanecimiento inferior si hay muchas miniaturas
+  const thumbsTrack = container.querySelector('[data-gallery-thumbs-track]');
+  const fadeIndicator = container.querySelector('[data-gallery-fade-indicator]');
+  if (thumbsTrack && fadeIndicator) {
+    thumbsTrack.addEventListener('scroll', () => {
+      const isAtBottom = thumbsTrack.scrollHeight - thumbsTrack.scrollTop - thumbsTrack.clientHeight < 24;
+      fadeIndicator.style.opacity = isAtBottom ? '0' : '1';
+    }, { passive: true });
+  }
 
   // Zoom de lupa al pasar el cursor en escritorio
   if (mainContainer && mainImg) {
@@ -1832,6 +1959,11 @@ document.addEventListener('click', (e) => {
         header.classList.remove('bg-black/20', 'backdrop-blur-lg', 'border-white/[0.06]', 'bg-surface/90', 'backdrop-blur-md', SHADOW);
         header.classList.add('bg-surface/95', 'border-line');
       }
+
+      // Logo a h-24 (96px) en escritorio + cabecera sticky se comía buena
+      // parte del viewport en cada scroll. `data-scrolled` encoge el logo
+      // (ver regla en app.css) en cuanto el usuario se aleja del top.
+      header.dataset.scrolled = String(y > 20);
     }
 
     if (bottomBlur) {
@@ -1902,24 +2034,48 @@ document.addEventListener('click', (e) => {
 
 /* -------------------------------------------------------------------------
  | Fondo de haces de luz — verde fluorescente, ambiental en todo el sitio.
- | Canvas + rAF puro: sin dependencia de librerías de animación.
+ |
+ | PERFORMANCE: En móvil (< 768px) el canvas NO se inicializa — se usa un
+ | fondo CSS estático. ctx.filter='blur()' a 60fps era la causa directa del
+ | TBT de 29,620ms (20 long tasks de 489-774ms). En desktop se reduce a 10
+ | haces, blur=20px, y se cede el hilo cada 5 frames con setTimeout para
+ | no bloquear interacciones del usuario.
  * ---------------------------------------------------------------------- */
 
 (function initBeamsBackground() {
   const canvas = document.querySelector('[data-beams-canvas]');
+  const pulseEl = document.querySelector('[data-beams-pulse]');
   if (!canvas) return;
+
+  // ── Mobile: fondo CSS estático, sin canvas, sin rAF, sin blur en GPU ──
+  // En pantallas pequeñas el efecto es imperceptible bajo luz natural y
+  // el costo de 18 haces + blur a 60fps es devastador para el TBT.
+  if (window.innerWidth < 768) {
+    canvas.style.display = 'none';
+    // Pulso ambiental estático verde muy sutil vía CSS
+    if (pulseEl) {
+      pulseEl.style.background =
+        'radial-gradient(ellipse 80% 50% at 50% 0%, hsla(160,84%,39%,0.07) 0%, transparent 70%)';
+    }
+    return;
+  }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Verde corporativo: hue 160 (#10b981),
-  // con la saturación (84%) y luminosidad (39%) de la marca.
   const HUE_MIN = 160;
   const HUE_RANGE = 0;
   const SATURATION = 84;
   const LIGHTNESS = 39;
 
-  const BEAM_COUNT = 18;
+  // PERFORMANCE: Reducido de 18 → 10 haces. El blur ya disuelve cualquier
+  // detalle individual — más haces no aportan visualmente.
+  const BEAM_COUNT = 10;
+
+  // PERFORMANCE: Cada N frames cedemos el hilo principal vía setTimeout
+  // para que los eventos de usuario (clic, scroll) no queden bloqueados.
+  const YIELD_EVERY_FRAMES = 5;
+  let frameCount = 0;
 
   let beams = [];
   let animationFrame = null;
@@ -1931,8 +2087,8 @@ document.addEventListener('click', (e) => {
       width: 30 + Math.random() * 60,
       length: height * 2.5,
       angle: -35 + Math.random() * 10,
-      speed: 0.6 + Math.random() * 1.2,
-      opacity: 0.16 + Math.random() * 0.18,
+      speed: 0.5 + Math.random() * 0.9,
+      opacity: 0.14 + Math.random() * 0.16,
       hue: HUE_MIN + Math.random() * HUE_RANGE,
       pulse: Math.random() * Math.PI * 2,
       pulseSpeed: 0.02 + Math.random() * 0.03,
@@ -1942,13 +2098,12 @@ document.addEventListener('click', (e) => {
   function resetBeam(beam, index, total) {
     const column = index % 3;
     const spacing = canvas.width / 3;
-
     beam.y = canvas.height + 100;
     beam.x = column * spacing + spacing / 2 + (Math.random() - 0.5) * spacing * 0.5;
-    beam.width = 100 + Math.random() * 100;
-    beam.speed = 0.5 + Math.random() * 0.4;
+    beam.width = 80 + Math.random() * 80;
+    beam.speed = 0.4 + Math.random() * 0.4;
     beam.hue = HUE_MIN + (index * HUE_RANGE) / total;
-    beam.opacity = 0.24 + Math.random() * 0.14;
+    beam.opacity = 0.20 + Math.random() * 0.12;
   }
 
   function drawBeam(beam) {
@@ -1958,60 +2113,100 @@ document.addEventListener('click', (e) => {
 
     const pulsingOpacity = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2);
     const gradient = ctx.createLinearGradient(0, 0, 0, beam.length);
-
-    gradient.addColorStop(0, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
+    gradient.addColorStop(0,   `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
     gradient.addColorStop(0.1, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity * 0.5})`);
     gradient.addColorStop(0.4, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity})`);
     gradient.addColorStop(0.6, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity})`);
     gradient.addColorStop(0.9, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, ${pulsingOpacity * 0.5})`);
-    gradient.addColorStop(1, `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
+    gradient.addColorStop(1,   `hsla(${beam.hue}, ${SATURATION}%, ${LIGHTNESS}%, 0)`);
 
     ctx.fillStyle = gradient;
     ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
     ctx.restore();
   }
 
+  // PERFORMANCE: DPR máximo 1.5. A dpr=3 el blur procesa 9× más píxeles
+  // sin ningún beneficio visual (ya lo disuelve el blur de 20px).
+  const MAX_DPR = 1.5;
+
   function updateCanvasSize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
+    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    canvas.width  = window.innerWidth  * dpr;
     canvas.height = window.innerHeight * dpr;
-    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.width  = `${window.innerWidth}px`;
     canvas.style.height = `${window.innerHeight}px`;
     ctx.scale(dpr, dpr);
-
     beams = Array.from({ length: BEAM_COUNT }, () => createBeam(canvas.width, canvas.height));
   }
 
-  function animate() {
+  function drawFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.filter = 'blur(35px)';
+    // PERFORMANCE: blur reducido de 35px → 20px. El efecto ambiental es
+    // idéntico visualmente — el blur ya aplana cualquier detalle individual.
+    ctx.filter = 'blur(20px)';
 
     beams.forEach((beam, index) => {
-      beam.y -= beam.speed;
+      beam.y     -= beam.speed;
       beam.pulse += beam.pulseSpeed;
-
-      if (beam.y + beam.length < -100) {
-        resetBeam(beam, index, beams.length);
-      }
-
+      if (beam.y + beam.length < -100) resetBeam(beam, index, beams.length);
       drawBeam(beam);
     });
+  }
 
-    animationFrame = requestAnimationFrame(animate);
+  function animate() {
+    drawFrame();
+    frameCount++;
+
+    // PERFORMANCE: Cada YIELD_EVERY_FRAMES cedemos el hilo principal.
+    // setTimeout(fn, 0) permite que el browser procese eventos de usuario
+    // (clic, scroll, input) antes del siguiente frame de animación.
+    // Resultado: en lugar de 20 long tasks de 700ms, hay micro-pauses
+    // que reducen el TBT drásticamente sin afectar la fluidez visual.
+    if (frameCount % YIELD_EVERY_FRAMES === 0) {
+      animationFrame = null;
+      setTimeout(() => {
+        if (!document.hidden) animationFrame = requestAnimationFrame(animate);
+      }, 0);
+    } else {
+      animationFrame = requestAnimationFrame(animate);
+    }
   }
 
   updateCanvasSize();
-  window.addEventListener('resize', updateCanvasSize);
 
-  // Sin movimiento para quien lo pidió: se deja un fotograma estático
-  // en vez de animar — el resto del theme sigue la misma regla en CSS.
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    // En desktop, si el viewport baja de 768px (rotar a portrait en tablet),
+    // detener la animación para no desperdiciar recursos.
+    if (window.innerWidth < 768) {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+      canvas.style.display = 'none';
+      return;
+    }
+    canvas.style.display = '';
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateCanvasSize, 150);
+  });
+
+  // Sin movimiento: fotograma estático.
   if (prefersReducedMotion.matches) {
-    ctx.filter = 'blur(35px)';
+    ctx.filter = 'blur(20px)';
     beams.forEach((beam) => drawBeam(beam));
     return;
   }
 
   animate();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    } else if (!animationFrame && window.innerWidth >= 768) {
+      frameCount = 0;
+      animate();
+    }
+  });
 
   window.addEventListener('pagehide', () => {
     if (animationFrame) cancelAnimationFrame(animationFrame);
