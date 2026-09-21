@@ -190,76 +190,7 @@
     <fieldset class="space-y-3 border-0 p-0 m-0">
       <legend class="text-xs font-bold uppercase tracking-wider text-ink p-0">{{ $label }}</legend>
 
-      @if ($taxonomy === 'pa_marca')
-        {{-- Cuadrícula visual de logotipos de marcas --}}
-        <div class="grid grid-cols-3 gap-2">
-          @foreach ($terms as $term)
-            @php
-              $isChecked = in_array($term->slug, $selectedValues);
-              $count = $termCounts[$term->slug] ?? 0;
-              // Deshabilitada (no oculta) si marcarla dejaría la tienda
-              // vacía: oculta, el visitante no entiende por qué la opción
-              // desapareció; deshabilitada y visible, entiende que existe
-              // pero no combina con lo que ya tiene marcado.
-              $isDisabled = ! $isChecked && $count === 0;
-
-              $newValues = $isChecked
-                ? array_diff($selectedValues, [$term->slug])
-                : array_merge($selectedValues, [$term->slug]);
-
-              $queryParams = $_GET;
-              unset($queryParams['paged']); // volver a la página 1 al cambiar de filtro
-
-              if (! empty($newValues)) {
-                $queryParams[$paramKey] = implode(',', $newValues);
-                // WooCommerce filtra en AND entre valores de un mismo
-                // atributo por defecto: marcar "Shimano" + "GW" devolvía 0
-                // productos porque ninguno tiene las dos marcas a la vez.
-                // query_type=or hace que baste con cualquiera de los
-                // valores marcados, que es el comportamiento esperado de
-                // una casilla de selección múltiple.
-                $queryParams[$queryTypeKey] = 'or';
-              } else {
-                unset($queryParams[$paramKey], $queryParams[$queryTypeKey]);
-              }
-
-              $filterUrl = $currentUrl . (! empty($queryParams) ? '?' . http_build_query($queryParams) : '');
-
-              // Logo real de la marca, editable en WooCommerce > Atributos >
-              // Marca (term meta, ver app/product-brands.php).
-              $logoUrl = \App\brand_logo_url($term);
-            @endphp
-
-            <a
-              @if (! $isDisabled) href="{{ $filterUrl }}" @endif
-              role="checkbox"
-              aria-checked="{{ $isChecked ? 'true' : 'false' }}"
-              @if ($isDisabled) aria-disabled="true" @endif
-              class="relative flex aspect-video items-center justify-center rounded-xl border px-2 py-1 transition-all {{ $isChecked ? 'border-emerald-400 bg-surface-raised/40 ring-1 ring-emerald-400/30' : 'border-line hover:border-white/20 bg-surface/20' }} {{ $isDisabled ? 'opacity-30 pointer-events-none cursor-not-allowed' : '' }}"
-              title="{{ $term->name }} ({{ $count }})"
-            >
-              @if ($logoUrl)
-                <img
-                  src="{{ $logoUrl }}"
-                  alt="{{ $term->name }}"
-                  class="h-full max-h-10 w-auto object-contain transition-all {{ $isChecked ? 'filter-none opacity-100 scale-105' : 'brand-logo-white-green' }}"
-                >
-              @else
-                <span class="text-[10px] font-bold uppercase tracking-wider {{ $isChecked ? 'text-emerald-400' : 'text-ink-muted' }}">
-                  {{ $term->name }}
-                </span>
-              @endif
-
-              @if ($isChecked)
-                <span class="absolute top-1 right-1 flex size-2.5 items-center justify-center rounded-full bg-emerald-400 text-[8px] text-[#0A0A0B] font-bold">
-                  ✓
-                </span>
-              @endif
-            </a>
-          @endforeach
-        </div>
-      @else
-        {{-- Lista de Checkbox Tradicional para otras taxonomías --}}
+      {{-- Lista de Checkbox Tradicional para todas las taxonomías (Marca, Talla, Longitud de biela, Color) --}}
         <div class="space-y-2">
           @foreach ($terms as $term)
             @php
@@ -311,7 +242,6 @@
             </a>
           @endforeach
         </div>
-      @endif
     </fieldset>
   @endforeach
 </div>
