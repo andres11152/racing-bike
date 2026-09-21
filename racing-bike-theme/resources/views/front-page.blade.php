@@ -77,8 +77,8 @@
         </div>
       </div>
 
-      {{-- Tarjetas grandes con gap reducido (1 col en móvil, 2 en sm, 3 en md/lg, 4 en xl) --}}
-      <div id="featured-grid-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 transition-all duration-300">
+      {{-- Tarjetas grandes con gap reducido (2 cols en móvil, 3 en md/lg, 4 en xl) --}}
+      <div id="featured-grid-container" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 transition-all duration-300">
         @foreach ($featuredProducts as $index => $product)
           <x-product-card :product="$product" list-id="home_featured" list-name="Destacados" :position="$index" />
         @endforeach
