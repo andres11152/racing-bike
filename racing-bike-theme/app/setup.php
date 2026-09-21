@@ -354,7 +354,11 @@ add_filter('woocommerce_enqueue_styles', '__return_empty_array');
  */
 add_action('wp_enqueue_scripts', function () {
     remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
-}, 1);
+    wp_dequeue_style('wp-block-library');
+    wp_dequeue_style('wp-block-library-theme');
+    wp_dequeue_style('wc-blocks-style');
+    wp_dequeue_style('classic-theme-styles');
+}, 100);
 
 /**
  * Remove WooCommerce's default loop decorations.

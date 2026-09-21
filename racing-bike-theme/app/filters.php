@@ -98,6 +98,18 @@ add_filter('woocommerce_attribute_label', function ($label) {
 });
 
 /**
+ * Aumentar el umbral de variaciones por AJAX para que data-product_variations
+ * incluya siempre todas las variaciones en el DOM (hasta 250).
+ *
+ * Por defecto WooCommerce desactiva el JSON inline si supera 30 variaciones
+ * (ej. GW Flamma con 32 o Sprinter con 36). Al subirlo a 250, el selector de swatches
+ * y la galería interactúan al instante sin requerir peticiones AJAX bloqueantes.
+ */
+add_filter('woocommerce_ajax_variation_threshold', function () {
+    return 250;
+});
+
+/**
  * Forzar la traducción de la política de privacidad en el Checkout al español de Colombia.
  */
 add_filter('woocommerce_get_privacy_policy_text', function ($text, $type) {
@@ -258,9 +270,13 @@ add_action('woocommerce_before_thankyou', function ($orderId) {
  */
 add_filter('woocommerce_add_to_cart_fragments', function ($fragments) {
     $fragments['[data-cart-drawer-body]'] = \Roots\view('components.cart-drawer-content')->render();
+    $cart_count = function_exists('WC') && WC()->cart ? (int) WC()->cart->get_cart_contents_count() : 0;
+    $is_visible = $cart_count > 0;
     $fragments['[data-cart-count]'] = sprintf(
-        '<span class="absolute -right-2 -top-2 flex size-4 items-center justify-center bg-action text-[10px] font-semibold text-on-action" data-cart-count>%d</span>',
-        function_exists('WC') && WC()->cart ? WC()->cart->get_cart_contents_count() : 0
+        '<span class="absolute -top-1.5 -right-1.5 flex size-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] sm:text-[11px] font-black text-black shadow-md ring-2 ring-[#0a0a0b] pointer-events-none transition-all duration-300 %s" data-cart-count%s>%d</span>',
+        $is_visible ? 'scale-100 opacity-100' : 'hidden opacity-0 scale-75',
+        $is_visible ? '' : ' style="display: none;"',
+        $cart_count
     );
     return $fragments;
 });
@@ -762,6 +778,11 @@ function rb_instagram_feed_shortcode(string $shortcode): string
         $node->parentNode?->removeChild($node);
     }
 
+    foreach ($xpath->query('//img') as $img) {
+        $img->setAttribute('loading', 'lazy');
+        $img->setAttribute('decoding', 'async');
+    }
+
     $wrap = $dom->getElementById('rb-instagram-feed-wrap');
 
     if (! $wrap) {
@@ -776,3 +797,140 @@ function rb_instagram_feed_shortcode(string $shortcode): string
     return $result;
 }
 
+/* ============================================================================
+ | PERFORMANCE: Optimizaciones de carga de scripts de terceros
+ |
+ | Lighthouse detectó que los scripts de Addi bloquean el parser y que
+ | hay 850KB de fuentes TTF sin caché larga cargadas síncronamente.
+ | Estas optimizaciones reducen el render-blocking time y el LCP.
+ ============================================================================ */
+
+/**
+ * Agregar defer a scripts para eliminar el bloqueo de renderizado en el <head>.
+ * Se incluyen jQuery, Underscore, WP-Util y scripts de plugins que el navegador
+ * puede parsear y ejecutar de forma asíncrona sin frenar el primer pintado (FCP).
+ */
+add_filter('script_loader_tag', function ($tag, $handle, $src) {
+    if (is_admin()) {
+        return $tag;
+    }
+
+    $deferrable = [
+        'jquery',
+        'jquery-core',
+        'jquery-migrate',
+        'underscore',
+        'wp-util',
+        'sbi_scripts',
+        'mailchimp-woocommerce',
+        'mailchimp-woocommerce-pixel-tracking',
+        'mailchimp-woocommerce-pixel-tracking-blocks',
+        'sourcebuster-js',
+        'wc-order-attribution',
+        'rb-size-calculator-js',
+        'buy-now-pay-later-addi',
+        'addi-home-banner',
+        'widget-addi',
+        'frontend-functions',
+    ];
+
+    if (in_array($handle, $deferrable, true) && ! str_contains($tag, 'defer') && ! str_contains($tag, 'async')) {
+        $tag = str_replace(' src=', ' defer src=', $tag);
+    }
+
+    return $tag;
+}, 10, 3);
+
+/**
+ * Agregar <link rel="preload"> para la imagen LCP del hero en la home.
+ *
+ * Busca el primer rb_slide y genera el preload con imagesrcset y imagesizes
+ * para que el navegador inicie la descarga de la imagen óptima desde el <head>.
+ */
+add_action('wp_head', function () {
+    if (! is_front_page()) {
+        return;
+    }
+
+    $slidePosts = get_posts([
+        'post_type' => 'rb_slide',
+        'posts_per_page' => 1,
+        'orderby' => 'menu_order',
+        'order' => 'ASC',
+        'no_found_rows' => true,
+    ]);
+
+    if (empty($slidePosts)) {
+        return;
+    }
+
+    $slide = $slidePosts[0];
+    $thumbnailId = get_post_thumbnail_id($slide);
+    $customMobile = get_post_meta($slide->ID, '_rb_slide_image_mobile', true);
+    $customMobileId = $customMobile ? attachment_url_to_postid($customMobile) : null;
+    $mobileAttachmentId = $customMobileId ?: ($thumbnailId ?: null);
+
+    if ($mobileAttachmentId) {
+        $srcset = wp_get_attachment_image_srcset($mobileAttachmentId, 'full');
+        $mobileUrl = wp_get_attachment_image_url($mobileAttachmentId, 'medium_large') ?: wp_get_attachment_image_url($mobileAttachmentId, 'large') ?: wp_get_attachment_image_url($mobileAttachmentId, 'full');
+        if ($srcset && $mobileUrl) {
+            echo '<link rel="preload" as="image" href="' . esc_url($mobileUrl) . '" imagesrcset="' . esc_attr($srcset) . '" imagesizes="100vw" fetchpriority="high">' . "\n";
+            return;
+        }
+    }
+
+    $imageUrl = $customMobile ?: ($thumbnailId ? get_the_post_thumbnail_url($slide, 'full') : '');
+    if ($imageUrl) {
+        echo '<link rel="preload" as="image" href="' . esc_url($imageUrl) . '" fetchpriority="high">' . "\n";
+    }
+}, 1);
+
+/**
+ * Desencolar Addi y calculadora de tallas en páginas donde no se usan.
+ * Evita cargar 850KB de fuentes TTF de S3, scripts y estilos innecesarios
+ * en el home y catálogo.
+ */
+add_action('wp_enqueue_scripts', function () {
+    if (is_admin()) {
+        return;
+    }
+
+    // Addi solo se usa en ficha de producto, carrito y checkout
+    if (! is_product() && ! is_cart() && ! is_checkout()) {
+        wp_dequeue_script('buy-now-pay-later-addi');
+        wp_deregister_script('buy-now-pay-later-addi');
+        wp_dequeue_script('widget-addi');
+        wp_deregister_script('widget-addi');
+        wp_dequeue_script('frontend-functions');
+        wp_deregister_script('frontend-functions');
+        wp_dequeue_style('widget-addi-style');
+        wp_deregister_style('widget-addi-style');
+    }
+
+    // Calculadora de tallas: solo en ficha de producto o página de tallas
+    $is_size_calculator_page = (function_exists('is_product') && is_product())
+        || is_singular('product')
+        || is_page('encuentra-tu-talla')
+        || is_page_template('template-encuentra-tu-talla.blade.php');
+    if (! $is_size_calculator_page) {
+        wp_dequeue_script('rb-size-calculator-js');
+        wp_dequeue_style('rb-size-calculator-css');
+        remove_action('wp_footer', 'rb_size_calculator_render_modal');
+    }
+}, 100);
+
+/**
+ * Desactivar modal del calculador de tallas del footer en páginas generales (ej. Home)
+ */
+add_action('template_redirect', function () {
+    if (is_admin()) {
+        return;
+    }
+    $is_size_calculator_page = (function_exists('is_product') && is_product())
+        || is_singular('product')
+        || is_page('encuentra-tu-talla')
+        || is_page_template('template-encuentra-tu-talla.blade.php');
+    if (! $is_size_calculator_page) {
+        remove_action('wp_footer', 'rb_size_calculator_render_modal');
+    }
+});
