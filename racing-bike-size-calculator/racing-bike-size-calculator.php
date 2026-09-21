@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Racing Bike Size Calculator
  * Description: Calculadora interactiva premium tipo modal para encontrar la talla ideal de bicicleta (Ruta, MTB, Gravel).
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: Skycode Agency
  * License: GPL2
  */
@@ -11,33 +11,64 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-// Registrar estilos y scripts
+// Helper para verificar si la página actual necesita la calculadora de tallas
+function rb_is_size_calculator_page() {
+    if ( is_admin() ) {
+        return false;
+    }
+    if ( is_singular( 'product' ) ) {
+        return true;
+    }
+    if ( function_exists( 'is_product' ) && is_product() ) {
+        return true;
+    }
+    if ( is_page( 'encuentra-tu-talla' ) || is_page_template( 'template-encuentra-tu-talla.blade.php' ) ) {
+        return true;
+    }
+    if ( is_singular() ) {
+        $post = get_post();
+        if ( $post && has_shortcode( $post->post_content, 'bike_size_calculator' ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Registrar estilos y scripts únicamente en páginas relevantes
 function rb_size_calculator_register_assets() {
+    if ( ! rb_is_size_calculator_page() ) {
+        return;
+    }
+
     wp_enqueue_style(
         'rb-size-calculator-css',
         plugins_url( 'assets/css/calculator.css', __FILE__ ),
         array(),
-        '1.0.7'
+        '1.0.8'
     );
 
     wp_enqueue_script(
         'rb-size-calculator-js',
         plugins_url( 'assets/js/calculator.js', __FILE__ ),
         array(),
-        '1.0.7',
+        '1.0.8',
         true
     );
 }
 add_action( 'wp_enqueue_scripts', 'rb_size_calculator_register_assets' );
 
-// Renderizar el modal en el footer del sitio
+// Renderizar el modal en el footer del sitio únicamente si la página lo requiere
 function rb_size_calculator_render_modal() {
+    if ( ! rb_is_size_calculator_page() ) {
+        return;
+    }
     ?>
     <div
       id="rb-size-finder-modal"
       class="rb-modal-overlay"
       role="dialog"
       aria-modal="true"
+      style="display: none;"
     >
       <div class="rb-modal-content">
         <!-- Brillo ambiental de fondo -->

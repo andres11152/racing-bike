@@ -243,6 +243,7 @@ function initRbSizeCalculator() {
 
     // Bloquea el scroll de fondo mientras el modal está abierto y autodetecta la disciplina
     function openModal() {
+        modal.style.display = 'flex';
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
@@ -274,6 +275,7 @@ function initRbSizeCalculator() {
 
     function closeModal() {
         modal.classList.remove('active');
+        modal.style.display = 'none';
         document.body.style.overflow = '';
     }
 
