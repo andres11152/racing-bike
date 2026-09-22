@@ -197,7 +197,7 @@
   {{ $attributes->merge(['class' => 'group relative flex flex-col justify-between overflow-hidden rounded-lg border border-transparent p-3 card-glass-glow']) }}
 >
   <a href="{{ $href }}" class="block">
-    <div class="relative aspect-4/5 overflow-hidden rounded bg-surface-muted" data-card-gallery data-active-index="0">
+    <div class="relative aspect-4/5 overflow-hidden" data-card-gallery data-active-index="0">
       @if (! empty($galleryImages))
         @foreach ($galleryImages as $index => $img)
           <img
