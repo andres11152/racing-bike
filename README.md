@@ -1,46 +1,46 @@
-# RACING BIKE 1998 — Tienda
+# RACING BIKE 1998 — Store
 
-Theme WordPress construido sobre [Sage 11](https://roots.io/sage/) (Blade + Acorn) con Tailwind CSS v4 y WooCommerce.
+WordPress theme built on [Sage 11](https://roots.io/sage/) (Blade + Acorn) with Tailwind CSS v4 and WooCommerce.
 
-## Requisitos
+## Requirements
 
 - Docker
 - Node 20.19+ / 22.12+
-- PHP 8.4.1+ y Composer (sólo para instalar dependencias del theme en el host)
+- PHP 8.4.1+ and Composer (only needed to install the theme's dependencies on the host)
 
-## Levantar el entorno local
+## Running the local environment
 
-```bash
+```
 cp .env.example .env
 docker compose up -d
 ```
 
-La tienda queda en **http://localhost:8080** y el admin en **/wp-admin** (`admin` / `admin`).
+The store is available at http://localhost:8080 and the admin at `/wp-admin` (`admin` / `admin`).
 
-> El theme se monta desde el host: editar Blade, CSS o JS se refleja sin reconstruir la imagen.
+The theme is mounted from the host: editing Blade, CSS or JS is reflected immediately, with no need to rebuild the image.
 
-### Aprovisionar desde cero
+## Provisioning from scratch
 
-Si el volumen está vacío, tras `docker compose up -d`:
+If the volume is empty, after `docker compose up -d`:
 
-```bash
+```
 set -a && . ./.env && set +a
 
-# 1. Instalar WordPress
+# 1. Install WordPress
 docker compose run --rm wpcli wp core install \
   --url="$WP_URL" --title="$WP_TITLE" \
   --admin_user="$WP_ADMIN_USER" --admin_password="$WP_ADMIN_PASSWORD" \
   --admin_email="$WP_ADMIN_EMAIL" --skip-email
 
-# 2. Theme y WooCommerce
+# 2. Theme and WooCommerce
 docker compose run --rm wpcli wp theme activate racing-bike-theme
 docker compose run --rm wpcli wp plugin install woocommerce --activate
 
-# 3. Registrar el service provider de sage-woocommerce y publicar sus vistas
+# 3. Register the sage-woocommerce service provider and publish its views
 docker compose run --rm wpcli wp acorn package:discover
 docker compose run --rm wpcli wp acorn vendor:publish --tag="woocommerce-template-views"
 
-# 4. Catálogo y menú de ejemplo
+# 4. Sample catalog and menu
 docker compose run --rm -v "$PWD/scripts:/scripts" wpcli wp eval-file /scripts/seed-catalog.php
 docker compose run --rm -v "$PWD/scripts:/scripts" wpcli wp eval-file /scripts/seed-menu.php
 docker compose run --rm -v "$PWD/scripts:/scripts" wpcli wp eval-file /scripts/seed-home.php
@@ -48,37 +48,37 @@ docker compose run --rm -v "$PWD/scripts:/scripts" wpcli wp eval-file /scripts/s
 
 ## Assets
 
-```bash
+```
 cd racing-bike-theme
 npm install
-npm run build     # producción
-npm run dev       # servidor de desarrollo Vite
+npm run build # production
+npm run dev   # Vite dev server
 ```
 
-## Notas de configuración
+## Configuration notes
 
-Estas son trampas conocidas, no preferencias — el sitio se rompe sin ellas:
+These are known gotchas, not preferences — the site breaks without them:
 
-- **`wp acorn package:discover` es obligatorio** tras instalar `generoi/sage-woocommerce`. Sin él, `vendor:publish` responde *"No publishable resources"* porque el service provider no está registrado.
-- **Carrito y Checkout usan shortcodes**, no bloques: `[woocommerce_cart]` y `[woocommerce_checkout]`. WooCommerce 9+ crea esas páginas con bloques, que ignoran las plantillas del theme.
-- ***Coming soon mode* debe estar desactivado** (`woocommerce_coming_soon` = `no`), o los visitantes no logueados no ven el theme.
-- **`config.platform.php` está fijado a 8.4.1** en `composer.json`. El árbol real (Acorn 6 + Symfony 8) exige ese mínimo; sin fijarlo, un `composer install` en PHP 8.5 genera un `vendor/` que revienta en contenedores con PHP menor.
-- Moneda configurada en **COP** con separador de miles `.` y 0 decimales.
-- **Los View Composers exponen datos vía `with()`, no como métodos públicos.** Acorn envuelve los métodos públicos en `InvokableComponentVariable`; al pasar una de esas variables a un atributo de componente (`:slides="$slides"`), Blade la escapa y `htmlspecialchars()` falla con un array. `with()` entrega valores planos.
+- `wp acorn package:discover` is required after installing `generoi/sage-woocommerce`. Without it, `vendor:publish` responds "No publishable resources" because the service provider isn't registered.
+- Cart and Checkout use shortcodes, not blocks: `[woocommerce_cart]` and `[woocommerce_checkout]`. WooCommerce 9+ creates those pages with blocks, which ignore the theme's templates.
+- Coming soon mode must be disabled (`woocommerce_coming_soon = no`), or logged-out visitors won't see the theme.
+- `config.platform.php` is pinned to `8.4.1` in `composer.json`. The actual dependency tree (Acorn 6 + Symfony 8) requires that minimum; without pinning it, running `composer install` on PHP 8.5 produces a `vendor/` that breaks on containers with an older PHP.
+- Currency is configured as COP with a `.` thousands separator and 0 decimals.
+- View Composers expose data via `with()`, not as public methods. Acorn wraps public methods in `InvokableComponentVariable`; when one of those variables is passed to a component attribute (`:slides="$slides"`), Blade escapes it and `htmlspecialchars()` fails on an array. `with()` delivers plain values.
 
-## Estructura
+## Structure
 
 ```
 racing-bike-theme/
-├── app/                    # Setup, filtros, View Composers
+├── app/                      # Setup, filters, View Composers
 ├── resources/
-│   ├── css/app.css         # Tokens de diseño + utilidades
-│   ├── js/app.js           # Drawers, carrusel, interacciones
+│   ├── css/app.css           # Design tokens + utilities
+│   ├── js/app.js             # Drawers, carousel, interactions
 │   └── views/
-│       ├── components/     # Componentes Blade reutilizables
-│       ├── sections/       # Header, footer
-│       └── woocommerce/    # Plantillas de tienda (publicadas)
-└── public/build/           # Assets compilados (ignorado en git)
+│       ├── components/       # Reusable Blade components
+│       ├── sections/         # Header, footer
+│       └── woocommerce/      # Store templates (published)
+└── public/build/             # Compiled assets (gitignored)
 
-scripts/                    # Semillas de datos para desarrollo
+scripts/                      # Development seed data
 ```
