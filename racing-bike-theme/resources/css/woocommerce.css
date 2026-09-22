@@ -396,8 +396,24 @@ details.group > summary::marker {
   @apply flex flex-wrap items-center gap-2.5 pt-1;
 }
 
+/* Colores: nombres largos y bicolores (p.ej. "Azul Zafiro – Negro
+   Brillante") se leen mejor en 2 columnas fijas que apilados a lo largo
+   de toda la pantalla — la lista de 9+ colores de una MTB pasaba de
+   ocupar media pantalla a mostrarse casi completa sin scroll. */
+.rb-swatches[data-attribute*="color" i] {
+  @apply grid grid-cols-2 gap-2;
+}
+
 .rb-swatch {
-  @apply min-w-12 px-4 py-2.5 rounded-xl border border-line bg-[#131417] text-xs font-bold uppercase tracking-wider text-ink-muted transition-all duration-200 hover:border-white/80 hover:text-white active:scale-95 cursor-pointer shadow-sm relative select-none;
+  @apply min-w-12 px-4 py-2.5 rounded-xl border border-line bg-[#131417] text-xs font-bold uppercase tracking-wider text-ink-muted transition-all duration-200 hover:border-white/80 hover:text-white active:scale-95 cursor-pointer shadow-sm relative select-none inline-flex items-center justify-center gap-2;
+}
+
+.rb-swatches[data-attribute*="color" i] .rb-swatch {
+  @apply w-full justify-start text-left;
+}
+
+.rb-swatch-dot {
+  @apply size-3.5 rounded-full border border-white/25 shrink-0;
 }
 
 .rb-swatch:hover {

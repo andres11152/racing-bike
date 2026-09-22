@@ -782,6 +782,68 @@ function syncVariationImage(form) {
 }
 window.rbSyncVariationImage = syncVariationImage;
 
+/* -------------------------------------------------------------------------
+ | Punto de color aproximado para los swatches de color.
+ |
+ | Los nombres de pa_color son nombres de pintura del proveedor ("Azul
+ | Zafiro", "Gris Abedul", "Rojo Chile" — bicolores como "Azul Zafiro –
+ | Negro Brillante"), no colores planos. En vez de mapear cada nombre
+ | exacto, se toma la primera palabra de cada lado (el color base real;
+ | "Zafiro", "Abedul", "Chile" son solo el matiz de marketing) contra un
+ | diccionario de colores base en español. Si no hay match no se pinta
+ | nada — mejor sin punto que con un color inventado.
+ * ---------------------------------------------------------------------- */
+const RB_BASE_COLOR_HEX = {
+  negro: '#1c1c1e',
+  blanco: '#f4f4f5',
+  gris: '#9ca3af',
+  plata: '#c7c9cc',
+  plateado: '#c7c9cc',
+  azul: '#2563eb',
+  celeste: '#38bdf8',
+  turquesa: '#14b8a6',
+  rojo: '#dc2626',
+  vino: '#7f1d1d',
+  granate: '#7f1d1d',
+  verde: '#16a34a',
+  amarillo: '#eab308',
+  naranja: '#f97316',
+  morado: '#7c3aed',
+  purpura: '#7c3aed',
+  violeta: '#7c3aed',
+  lila: '#a78bfa',
+  rosa: '#ec4899',
+  fucsia: '#db2777',
+  dorado: '#ca8a04',
+  oro: '#ca8a04',
+  cafe: '#78350f',
+  marron: '#78350f',
+  chocolate: '#5c3a21',
+  beige: '#d6c9a8',
+  crema: '#f0e4c8',
+  cobre: '#b45309',
+};
+
+function rbSwatchColorFor(label) {
+  const normalize = (str) => str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const parts = String(label).split(/[–-]/).map((part) => normalize(part).trim().split(/\s+/)[0]).filter(Boolean);
+  const hexes = parts.map((word) => RB_BASE_COLOR_HEX[word]).filter(Boolean);
+
+  if (hexes.length === 0) return null;
+  if (hexes.length === 1 || hexes[0] === hexes[1]) return { type: 'solid', hexes: [hexes[0]] };
+  return { type: 'split', hexes: hexes.slice(0, 2) };
+}
+
+function rbBuildSwatchDot(colorInfo) {
+  const dot = document.createElement('span');
+  dot.className = 'rb-swatch-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  dot.style.background = colorInfo.type === 'split'
+    ? `linear-gradient(90deg, ${colorInfo.hexes[0]} 50%, ${colorInfo.hexes[1]} 50%)`
+    : colorInfo.hexes[0];
+  return dot;
+}
+
 window.initSwatches = function() {
   document.querySelectorAll('.variations_form').forEach((form) => {
     const priceContainer = form.closest('.grid')?.querySelector('.rb-woo-price') || document.querySelector('.rb-woo-price');
@@ -817,14 +879,26 @@ window.initSwatches = function() {
         options.forEach((opt) => select.appendChild(opt));
       }
 
+      const isColorAttribute = /color/i.test(attributeName);
+
       options.forEach((option) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'rb-swatch';
-        button.textContent = option.textContent;
         button.dataset.value = option.value;
         button.dataset.attribute = attributeName;
         button.dataset.selected = String(select.value === option.value);
+
+        if (isColorAttribute) {
+          const colorInfo = rbSwatchColorFor(option.textContent);
+          if (colorInfo) {
+            button.appendChild(rbBuildSwatchDot(colorInfo));
+          }
+        }
+
+        const label = document.createElement('span');
+        label.textContent = option.textContent;
+        button.appendChild(label);
 
         button.addEventListener('click', () => {
           // Volver a pulsar la talla/color activa la deselecciona o selecciona
