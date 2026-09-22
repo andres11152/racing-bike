@@ -497,6 +497,47 @@ add_action('wp_ajax_rb_quick_view', $quickViewHandler);
 add_action('wp_ajax_nopriv_rb_quick_view', $quickViewHandler);
 
 /**
+ * Restringir la búsqueda de productos al nombre únicamente.
+ *
+ * Por defecto WordPress busca "s" en post_title, post_content y
+ * post_excerpt a la vez — así, buscar "ruedas" o "llantas" devolvía
+ * cualquier bicicleta cuya ficha técnica mencionara esas palabras (ej.
+ * "ruedas Bontrager Kovee TLR" en la descripción), aunque el producto en
+ * sí no fuera de ruedas ni llantas. El filtro de abajo (posts_orderby)
+ * solo reordena por relevancia de título; no impedía que esos productos
+ * aparecieran, solo los mandaba al final.
+ */
+add_filter('posts_search', function ($search, \WP_Query $query) {
+    // Ojo con is_admin(): en WordPress devuelve true para CUALQUIER
+    // petición bajo /wp-admin/, incluido admin-ajax.php — que es
+    // justamente donde vive la búsqueda predictiva del header. Guardar
+    // con is_admin() aquí hacía que el filtro se cancelara solo en el
+    // caso que más importaba, y la búsqueda en vivo seguía trayendo
+    // coincidencias de descripción sin restringir nada.
+    if (! $query->is_search()) {
+        return $search;
+    }
+
+    $isProductSearch = $query->get('post_type') === 'product'
+        || is_woocommerce()
+        || (isset($_GET['post_type']) && $_GET['post_type'] === 'product');
+
+    if (! $isProductSearch) {
+        return $search;
+    }
+
+    $term = trim((string) $query->get('s'));
+
+    if ($term === '') {
+        return $search;
+    }
+
+    global $wpdb;
+
+    return $wpdb->prepare(" AND {$wpdb->posts}.post_title LIKE %s ", '%' . $wpdb->esc_like($term) . '%');
+}, 10, 2);
+
+/**
  * Priorizar coincidencias en el título en búsquedas de WooCommerce (Enterprise Search Relevance).
  */
 add_filter('posts_orderby', function ($orderby, \WP_Query $query) {
