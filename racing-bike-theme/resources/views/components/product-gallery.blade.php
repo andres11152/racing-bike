@@ -50,7 +50,7 @@
         @foreach ($images as $index => $img)
           <button
             type="button"
-            class="group relative aspect-square w-full shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-surface-muted hover:bg-surface-raised data-[active=true]:border-primary data-[active=true]:ring-2 data-[active=true]:ring-primary/30 border-line hover:border-line-strong hover:scale-[1.02]"
+            class="group relative aspect-square w-full shrink-0 overflow-hidden rounded transition-all duration-300 cursor-pointer opacity-60 hover:opacity-100 data-[active=true]:opacity-100 data-[active=true]:ring-2 data-[active=true]:ring-primary/60 hover:scale-[1.02]"
             data-gallery-thumb
             data-index="{{ $index }}"
             data-active="{{ $index === 0 ? 'true' : 'false' }}"
@@ -61,7 +61,7 @@
               src="{{ $img['thumb'] }}"
               alt="{{ $img['alt'] }}"
               loading="lazy"
-              class="size-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-105"
+              class="size-full object-contain transition-transform duration-300 group-hover:scale-105"
             >
           </button>
         @endforeach
@@ -141,7 +141,7 @@
         @foreach ($images as $index => $img)
           <button
             type="button"
-            class="relative aspect-square size-16 rounded-2xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer bg-surface-muted data-[active=true]:border-primary data-[active=true]:ring-2 data-[active=true]:ring-primary/30 border-line hover:border-line-strong"
+            class="relative aspect-square size-16 overflow-hidden rounded transition-all duration-200 shrink-0 cursor-pointer opacity-60 data-[active=true]:opacity-100 data-[active=true]:ring-2 data-[active=true]:ring-primary/60"
             data-gallery-thumb
             data-index="{{ $index }}"
             data-active="{{ $index === 0 ? 'true' : 'false' }}"
@@ -152,7 +152,7 @@
               src="{{ $img['thumb'] }}"
               alt="{{ $img['alt'] }}"
               loading="lazy"
-              class="size-full object-contain p-1.5"
+              class="size-full object-contain"
             >
           </button>
         @endforeach
