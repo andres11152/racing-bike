@@ -12,10 +12,14 @@ if (! defined('ABSPATH')) {
 }
 
 /**
- * Obtener la meta de envío gratis en COP (por defecto $450.000 COP).
+ * Obtener la meta de envío gratis en COP (por defecto $500.000 COP).
+ *
+ * El envío gratis solo aplica para pedidos con destino Bogotá. Para el
+ * resto del país el costo se calcula con la transportadora y se le
+ * notifica al cliente por correo/WhatsApp — ver rb_cro_get_shipping_data().
  */
 function rb_cro_get_shipping_threshold() {
-    $threshold = (float) get_option('rb_cro_shipping_threshold', 450000);
+    $threshold = (float) get_option('rb_cro_shipping_threshold', 500000);
     return apply_filters('rb_cro_shipping_threshold', $threshold);
 }
 
@@ -38,11 +42,11 @@ function rb_cro_get_shipping_data() {
     $formatted_threshold = function_exists('wc_price') ? wc_price($threshold) : '$' . number_format($threshold, 0, ',', '.');
 
     if ($subtotal <= 0) {
-        $message = sprintf(__('Agrega productos para obtener <strong>ENVÍO GRATIS</strong> (compras desde %s).', 'sage'), $formatted_threshold);
+        $message = sprintf(__('Agrega productos para obtener <strong>ENVÍO GRATIS en Bogotá</strong> (compras desde %s). Para otras ciudades el envío se calcula con la transportadora.', 'sage'), $formatted_threshold);
     } elseif (! $is_unlocked) {
-        $message = sprintf(__('¡Estás a solo <strong>%s</strong> de obtener <strong>ENVÍO GRATIS</strong> a toda Colombia!', 'sage'), $formatted_remaining);
+        $message = sprintf(__('¡Estás a solo <strong>%s</strong> de obtener <strong>ENVÍO GRATIS en Bogotá</strong>! Para otras ciudades el envío se calcula con la transportadora y te lo confirmamos por WhatsApp/correo.', 'sage'), $formatted_remaining);
     } else {
-        $message = __('🎉 ¡Felicidades! Tienes <strong>ENVÍO GRATIS ASEGURADO</strong> en este pedido.', 'sage');
+        $message = __('🎉 ¡Felicidades! Tienes <strong>ENVÍO GRATIS ASEGURADO si tu pedido es para Bogotá</strong>. Para otras ciudades el costo se calcula con la transportadora y te lo confirmamos por WhatsApp/correo.', 'sage');
     }
 
     return [
