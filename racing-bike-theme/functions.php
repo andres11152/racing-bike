@@ -42,6 +42,25 @@ Application::configure()
 
 /*
 |--------------------------------------------------------------------------
+| Silence premature textdomain notice from woo-discount-rules
+|--------------------------------------------------------------------------
+|
+| Advanced Woo Discount Rules loads its translations before the 'init'
+| hook, which WP 6.7+ flags via _doing_it_wrong(). This is a bug in the
+| plugin itself (not fixable from the theme), so we only suppress this
+| specific notice rather than hiding doing_it_wrong() warnings in general.
+|
+*/
+add_filter('doing_it_wrong_trigger_error', function ($trigger, $function_name, $message) {
+    if ($function_name === '_load_textdomain_just_in_time' && str_contains($message, 'woo-discount-rules')) {
+        return false;
+    }
+
+    return $trigger;
+}, 10, 3);
+
+/*
+|--------------------------------------------------------------------------
 | Register Sage Theme Files
 |--------------------------------------------------------------------------
 |
