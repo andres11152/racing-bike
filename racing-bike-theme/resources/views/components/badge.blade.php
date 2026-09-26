@@ -8,6 +8,7 @@
     'sale' => 'bg-action text-on-action',
     'outline' => 'border border-line-strong text-ink',
     'sold-out' => 'bg-transparent text-ink-subtle line-through',
+    'dark' => 'bg-black/70 text-white backdrop-blur-md border border-white/10',
   ];
 
   $class = $variants[$variant] ?? $variants['default'];

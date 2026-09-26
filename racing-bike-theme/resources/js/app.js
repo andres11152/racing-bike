@@ -1731,6 +1731,31 @@ if (window.jQuery) {
     thumbsByIndex.get(idx).push(thumb);
   });
 
+  // Desplaza la miniatura activa dentro de SU tira nada más. No se usa
+  // `scrollIntoView`: por defecto recorre y desplaza también los
+  // contenedores ancestros (incluida la página completa), así que elegir
+  // una talla/color hacía saltar todo el scroll de la ficha hacia la
+  // galería en vez de solo mover la tira de miniaturas.
+  function scrollThumbIntoTrack(thumb) {
+    const track = thumb.closest('[data-gallery-thumbs-track]');
+    if (!track) return;
+
+    const trackRect = track.getBoundingClientRect();
+    const thumbRect = thumb.getBoundingClientRect();
+
+    if (thumbRect.top < trackRect.top) {
+      track.scrollTop -= trackRect.top - thumbRect.top;
+    } else if (thumbRect.bottom > trackRect.bottom) {
+      track.scrollTop += thumbRect.bottom - trackRect.bottom;
+    }
+
+    if (thumbRect.left < trackRect.left) {
+      track.scrollLeft -= trackRect.left - thumbRect.left;
+    } else if (thumbRect.right > trackRect.right) {
+      track.scrollLeft += thumbRect.right - trackRect.right;
+    }
+  }
+
   const lightboxModal = container.querySelector('[data-lightbox-modal]');
   const lightboxImg = container.querySelector('[data-lightbox-img]');
   const lightboxCounter = container.querySelector('[data-lightbox-counter]');
@@ -1778,7 +1803,7 @@ if (window.jQuery) {
           const isActive = idx === matchedThumbIndex;
           thumb.dataset.active = isActive ? 'true' : 'false';
           if (isActive) {
-            thumb.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            scrollThumbIntoTrack(thumb);
           }
         });
       });
@@ -1838,7 +1863,7 @@ if (window.jQuery) {
         const isActive = idx === index;
         thumb.dataset.active = isActive ? 'true' : 'false';
         if (isActive) {
-          thumb.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+          scrollThumbIntoTrack(thumb);
         }
       });
     });

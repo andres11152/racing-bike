@@ -107,7 +107,7 @@
           woocommerce_output_all_notices();
         @endphp
 
-        <div class="grid gap-10 md:grid-cols-2 md:gap-12 lg:gap-16 overflow-hidden">
+        <div class="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-12 lg:gap-16">
           <x-product-gallery :product="$product" />
 
           {{-- La columna de compra acompaña el scroll en pantallas altas. --}}

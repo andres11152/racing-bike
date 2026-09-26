@@ -264,11 +264,15 @@ details.group > summary::marker {
  | de contención donde el scroll horizontal nunca tiene sentido.
  * -------------------------------------------------------------------- */
 
-/* Toda la columna de producto (gallery + buy column) no debe desbordar */
+/* Toda la columna de producto (gallery + buy column) no debe desbordar.
+   `clip`, no `hidden`: `hidden` crea un contenedor de scroll programático
+   (JS puede seguir haciendo scrollLeft dentro de él) y anula `position:
+   sticky` en los descendientes — rompía el sticky de la columna de compra
+   en escritorio. */
 .single-product .main,
 .single-product [class*="rb-container"] {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Selector de swatches: garantizar que el flex-wrap no desborde */

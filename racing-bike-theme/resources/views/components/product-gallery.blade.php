@@ -35,7 +35,7 @@
 @endphp
 
 <div
-  class="flex flex-col md:flex-row gap-4 items-start w-full"
+  class="flex flex-col md:flex-row gap-4 items-start w-full min-w-0"
   data-product-gallery
   data-images="{{ json_encode(array_column($images, 'full'), JSON_UNESCAPED_SLASHES) }}"
 >
@@ -43,7 +43,7 @@
   @if (count($images) > 1)
     <div class="hidden md:block relative w-20 lg:w-24 shrink-0">
       <div
-        class="flex flex-col gap-3 max-h-[500px] lg:max-h-[580px] overflow-y-auto pr-1 pb-10 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        class="flex flex-col gap-3 max-h-[500px] lg:max-h-[580px] overflow-y-auto px-1 pb-10 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-gallery-thumbs-track
         style="mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 64px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 64px), transparent 100%);"
       >
@@ -84,9 +84,9 @@
   @endif
 
   {{-- Visor Principal con Zoom al Hover --}}
-  <div class="flex-1 w-full relative">
+  <div class="flex-1 w-full min-w-0 relative">
     <div
-      class="relative aspect-4/5 md:aspect-square overflow-hidden group cursor-zoom-in"
+      class="relative aspect-square overflow-hidden rounded-xl bg-white group cursor-zoom-in"
       data-gallery-main-container
     >
       {{--
@@ -98,12 +98,17 @@
         al cambiar de talla o color, la foto nueva saltaba a otro recorte
         distinto. La caja de luz ya usaba object-contain, así que además
         eran dos encuadres distintos para la misma foto.
+
+        El contenedor es SIEMPRE un cuadrado con fondo blanco: object-contain
+        deja huecos alrededor de fotos no cuadradas, y sin un fondo fijo esos
+        huecos mostraban el fondo oscuro de la página, dando la sensación de
+        que el bloque de imagen "encogía" según la foto.
       --}}
       @if (! empty($images))
         <img
           src="{{ $images[0]['full'] }}"
           alt="{{ $images[0]['alt'] }}"
-          class="size-full object-contain transition-transform duration-200 ease-out origin-center"
+          class="size-full object-contain p-6 md:p-10 transition-transform duration-200 ease-out origin-center"
           fetchpriority="high"
           decoding="async"
           data-gallery-main-img
@@ -115,7 +120,7 @@
       @if ($product->is_on_sale() || ! $product->is_in_stock())
         <div class="absolute left-4 top-4 flex flex-col gap-1.5 z-10 pointer-events-none">
           @if (! $product->is_in_stock())
-            <x-badge variant="outline">{{ __('Agotado', 'sage') }}</x-badge>
+            <x-badge variant="dark">{{ __('Agotado', 'sage') }}</x-badge>
           @elseif ($product->is_on_sale())
             <x-badge variant="sale">{{ __('Oferta Especial', 'sage') }}</x-badge>
           @endif
@@ -137,7 +142,10 @@
 
     {{-- Tira Horizontal de Miniaturas en MÓVIL (Al pie de la imagen principal) --}}
     @if (count($images) > 1)
-      <div class="flex md:hidden gap-3 overflow-x-auto pt-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
+      <div
+        class="flex md:hidden gap-3 overflow-x-auto px-1 pt-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth"
+        data-gallery-thumbs-track
+      >
         @foreach ($images as $index => $img)
           <button
             type="button"
