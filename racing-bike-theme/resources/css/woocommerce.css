@@ -317,10 +317,16 @@ details.group > summary::marker {
   @apply flex flex-col gap-4;
 }
 
-/* Fila de cantidad + botón, uno junto al otro. */
+/* Fila de cantidad + botón.
+   Apilados en móvil (cantidad arriba, botón a todo el ancho debajo), uno
+   junto al otro desde `sm`. En una fila horizontal fija, el botón (flex-1)
+   competía por el espacio restante junto al selector de cantidad — en
+   pantallas de 360-375px el texto de "Añadir al carrito" no cabía en ese
+   remanente y el botón terminaba empujando/tapando la cantidad y los
+   controles +/-. Apilar evita que compitan por el mismo ancho. */
 .rb-woo-add-to-cart .cart:not(.variations_form),
 .rb-woo-add-to-cart .variations_button {
-  @apply flex flex-row items-center gap-3 mt-3 w-full;
+  @apply flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3 w-full;
 }
 
 .screen-reader-text,
@@ -360,7 +366,7 @@ details.group > summary::marker {
 
 .rb-woo-add-to-cart .single_add_to_cart_button,
 .rb-woo-add-to-cart button[type="submit"] {
-  @apply flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-black uppercase tracking-wider px-6 text-xs hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-lg cursor-pointer h-12;
+  @apply w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-black uppercase tracking-wider px-6 text-xs hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-lg cursor-pointer h-12;
 }
 
 .rb-woo-add-to-cart .single_add_to_cart_button:disabled,
